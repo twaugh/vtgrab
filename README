@@ -1,0 +1,20 @@
+vtgrab is a program to copy the foreground terminal of one machine to
+another, in order to allow remote monitoring.
+
+You can use it like this:
+
+# ssh observed 'vtgrab --server' | vtgrab --client
+
+(Unfortunately, it needs to run as root on _both_ machines.)
+
+The eventual aim is to be able to use this in a teaching environment
+in such a way that whatever is on the student's screen can be seen by
+the tutor, including graphics.  Ideally, someone would write an
+x0rfbserver that would help with that last bit, hint hint Jens. ;-)
+
+There seem to be some bugs which I don't fully understand in this
+release: vtgrab sometimes has bad interactions with X when switching
+the foreground console.  It might be something to do with VT_RELDISP.
+
+Tim.
+*/
