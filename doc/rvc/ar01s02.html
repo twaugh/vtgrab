@@ -1,0 +1,34 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>
+   Viewing
+  </title><meta name="generator" content="DocBook XSL Stylesheets V1.64.1"><link rel="home" href="index.html" title="The RVC Protocol (draft 6!)"><link rel="up" href="index.html" title="The RVC Protocol (draft 6!)"><link rel="previous" href="index.html" title="The RVC Protocol (draft 6!)"><link rel="next" href="ar01s03.html" title="
+   Controlling
+  "></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">
+   Viewing
+  </th></tr><tr><td width="20%" align="left"><a accesskey="p" href="index.html">Prev</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> <a accesskey="n" href="ar01s03.html">Next</a></td></tr></table><hr></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="view"></a>
+   Viewing
+  </h2></div></div><div></div></div><p>
+   The viewing side of the protocol is split into three types of
+   update, based on common tasks for virtual consoles: writing text
+   at the cursor position, scrolling, and other arbitrary updates to
+   characters at certain positions on the screen (as well as cursor
+   position changes).
+  </p><p>
+   In addition, the server can report when the machine has switched to
+   a virtual console that is in a graphical mode, in order for the
+   client to be able to use RFB to get updates for that console.
+  </p><p>
+   Since different virtual consoles may have different sizes, the
+   server can report a console size change; the client may however
+   request that the server just sends the bottom left rectangle of a
+   console that is too large to display in its entirety.
+  </p><p>
+   Unlike RFB, RVC is not demand-driven by the client; the server will
+   send incremental updates as and when they happen.  However, the
+   client can request a full screen update explicitly.  Since text
+   consoles are not nearly as big as graphical ones, bandwidth
+   considerations don't warrant quite the same concern as with RFB.
+   However, the client can specify (at the beginning of the
+   connection) a maximum rate at which incremental updates are sent.
+  </p></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="index.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="index.html">Up</a></td><td width="40%" align="right"> <a accesskey="n" href="ar01s03.html">Next</a></td></tr><tr><td width="40%" align="left" valign="top">The RVC Protocol (draft 6!) </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> 
+   Controlling
+  </td></tr></table></div></body></html>

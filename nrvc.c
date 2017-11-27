@@ -214,41 +214,31 @@ static int main_menu (int fd, int key)
 		if (iscntrl (escape_key))
 			wprintw (wnd, "Control-");
 		if ((escape_key & 0x1f) == (escape_escape_key & 0x1f)) {
-			wattron (wnd, A_UNDERLINE);
-			wprintw (wnd, "%c", 'A' - 1 + (escape_key & 0x1f));
-			wattroff (wnd, A_UNDERLINE);
+			waddch (wnd, ('A' - 1 + (escape_key & 0x1f)) | A_BOLD);
 		} else {
 			wprintw (wnd, "%c (", 'A' - 1 + (escape_key & 0x1f));
-			wattron (wnd, A_UNDERLINE);
+			wattron (wnd, A_BOLD);
 			wprintw (wnd, "%s%c",
 				 iscntrl (escape_escape_key) ?  "^" : "",
 				 'A' - 1 + (escape_escape_key & 0x1f));
-			wattroff (wnd, A_UNDERLINE);
+			wattroff (wnd, A_BOLD);
 			wprintw (wnd, ")");
 		}
 		wmove (wnd, y++, 3);
-		wattron (wnd, A_UNDERLINE);
-		wprintw (wnd, "E");
-		wattroff (wnd, A_UNDERLINE);
+		waddch (wnd, 'E' | A_BOLD);
 		wprintw (wnd, "xit main menu");
 		wmove (wnd, y, 3);
-		wattron (wnd, A_UNDERLINE);
-		wprintw (wnd, "K");
-		wattroff (wnd, A_UNDERLINE);
+		waddch (wnd, 'K' | A_BOLD);
 		wprintw (wnd, "eyboard control");
 		wmove (wnd, y++, width - 5);
 		wprintw (wnd, "%s", keyboard_control ? " On" : "Off");
 		wmove (wnd, y++, 3);
 		wprintw (wnd, "Switch ");
-		wattron (wnd, A_UNDERLINE);
-		wprintw (wnd, "v");
-		wattroff (wnd, A_UNDERLINE);
+		waddch (wnd, 'v' | A_BOLD);
 		wprintw (wnd, "irtual terminal");
 		wmove (wnd, y++, 3);
 		wprintw (wnd, "E");
-		wattron (wnd, A_UNDERLINE);
-		wprintw (wnd, "x");
-		wattroff (wnd, A_UNDERLINE);
+		waddch (wnd, 'x' | A_BOLD);
 		wprintw (wnd, "it viewer");
 		selection = 0;
 		wmove (wnd, 2 + selection, 2);

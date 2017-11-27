@@ -1,6 +1,6 @@
 Summary: A remote console viewer.
 Name: vtgrab
-Version: @VERSION@
+Version: 0.1.9
 Release: 1
 License: GPL
 Group: Applications/System

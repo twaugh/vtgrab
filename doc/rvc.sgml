@@ -1,12 +1,13 @@
-<!-- -*- sgml -*- -->
-<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook V3.1//EN"[
+<?xml version='1.0'?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+ "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd"[
 <!ENTITY VNC "<application>VNC</application>">
 ]>
 
-<article id=index>
+<article id="index">
  <title>The RVC Protocol (draft 6!)</title>
 
- <artheader>
+ <articleinfo>
   <author>
    <firstname>
     Tim
@@ -23,7 +24,7 @@
     </address>
    </affiliation>
   </author>
- </artheader>
+ </articleinfo>
 
  <section id="intro">
   <title>
@@ -169,7 +170,7 @@
     Handshake messages
    </title>
 
-   <section
+   <section>
     <title>
      <literal>ProtocolVersion</literal>
     </title>
@@ -202,13 +203,13 @@
       ProtocolVersion
      </title>
      <tgroup cols="5" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="value">
-      <colspec colname="v1">
-      <colspec colname="v2">
-      <colspec colname="v3">
+      <colspec colname="num"/>
+      <colspec colname="value"/>
+      <colspec colname="v1"/>
+      <colspec colname="v2"/>
+      <colspec colname="v3"/>
       <spanspec spanname="valuespan" namest="value" nameend="v3"
-       align="left">
+       align="left"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>
@@ -238,13 +239,13 @@
 
     <table frame="all"><title><literal>Authentication</literal></title>
      <tgroup cols="5" align="left" colsep="1" rowsep="0">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
-      <colspec colname="descr2">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
+      <colspec colname="descr2"/>
       <spanspec spanname="description" namest="descr" nameend="descr2"
-       align="left">
+       align="left"/>
       <thead>
        <row>
 	<entry rowsep="1">No. of bytes</entry>
@@ -296,13 +297,13 @@
 
       <table frame="all"><title><emphasis>connection failed</emphasis></title>
        <tgroup cols="5" align="left" colsep="1" rowsep="1">
-	<colspec colname="num">
-	<colspec colname="type">
-	<colspec colname="value">
-	<colspec colname="descr">
-	<colspec colname="descr2">
+	<colspec colname="num"/>
+	<colspec colname="type"/>
+	<colspec colname="value"/>
+	<colspec colname="descr"/>
+	<colspec colname="descr2"/>
 	<spanspec spanname="description" namest="descr" nameend="descr2"
-	 align="left">
+	 align="left"/>
 	<thead>
 	 <row>
 	  <entry>No. of bytes</entry>
@@ -365,13 +366,13 @@
 
     <table frame="all"><title><literal>ServerInitialisation</literal></title>
      <tgroup cols="5" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
-      <colspec colname="descr2">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
+      <colspec colname="descr2"/>
       <spanspec spanname="description" namest="descr" nameend="descr2"
-       align="left">
+       align="left"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>
@@ -409,11 +410,11 @@
 
     <table frame="all"><title>Features</title>
      <tgroup cols="3" align="left" colsep="1" rowsep="1">
-      <colspec colname="feature">
-      <colspec colname="descr">
-      <colspec colname="descr2">
+      <colspec colname="feature"/>
+      <colspec colname="descr"/>
+      <colspec colname="descr2"/>
       <spanspec spanname="description" namest="descr" nameend="descr2"
-       align="left">
+       align="left"/>
       <thead>
        <row>
 	<entry>Feature</entry>
@@ -490,13 +491,13 @@
 
     <table frame="all"><title><literal>ClientInitialisation</literal></title>
      <tgroup cols="5" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
-      <colspec colname="descr2">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
+      <colspec colname="descr2"/>
       <spanspec spanname="description" namest="descr" nameend="descr2"
-       align="left">
+       align="left"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>
@@ -608,10 +609,10 @@
 
     <table frame="all"><title><literal>FullUpdateRequest</literal></title>
      <tgroup cols="4" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>
@@ -644,10 +645,10 @@
 
     <table frame="all"><title><literal>Key</literal></title>
      <tgroup cols="4" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>
@@ -686,10 +687,10 @@
 
     <table frame="all"><title><literal>Pointer</literal></title>
      <tgroup cols="4" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>
@@ -750,10 +751,10 @@
 
     <table frame="all"><title><literal>SwitchRequest</literal></title>
      <tgroup cols="4" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>
@@ -794,10 +795,10 @@
 
     <table frame="all"><title><literal>Terminate</literal></title>
      <tgroup cols="4" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>
@@ -837,10 +838,10 @@
 
     <table frame="all"><title><literal>IncrementalUpdate</literal></title>
      <tgroup cols="4" align="left" colsep="1" rowsep="0">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
       <thead>
        <row>
 	<entry rowsep="1">No. of bytes</entry>
@@ -914,10 +915,10 @@
 
       <table frame="all"><title><literal>rectangle</literal></title>
        <tgroup cols="4" align="left" colsep="1" rowsep="1">
-	<colspec colname="num">
-	<colspec colname="type">
-	<colspec colname="value">
-	<colspec colname="descr">
+	<colspec colname="num"/>
+	<colspec colname="type"/>
+	<colspec colname="value"/>
+	<colspec colname="descr"/>
 	<thead>
 	 <row>
 	  <entry>No. of bytes</entry>
@@ -989,10 +990,10 @@
 
       <table frame="all"><title><literal>scroll</literal></title>
        <tgroup cols="4" align="left" colsep="1" rowsep="1">
-	<colspec colname="num">
-	<colspec colname="type">
-	<colspec colname="value">
-	<colspec colname="descr">
+	<colspec colname="num"/>
+	<colspec colname="type"/>
+	<colspec colname="value"/>
+	<colspec colname="descr"/>
 	<thead>
 	 <row>
 	  <entry>No. of bytes</entry>
@@ -1039,10 +1040,10 @@
 
     <table frame="all"><title><literal>Switch</literal></title>
      <tgroup cols="4" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>
@@ -1101,10 +1102,10 @@
 
     <table frame="all"><title><literal>Terminate</literal></title>
      <tgroup cols="4" align="left" colsep="1" rowsep="1">
-      <colspec colname="num">
-      <colspec colname="type">
-      <colspec colname="value">
-      <colspec colname="descr">
+      <colspec colname="num"/>
+      <colspec colname="type"/>
+      <colspec colname="value"/>
+      <colspec colname="descr"/>
       <thead>
        <row>
 	<entry>No. of bytes</entry>

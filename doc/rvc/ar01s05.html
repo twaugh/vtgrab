@@ -1,0 +1,192 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>
+   RVC Protocol
+  </title><meta name="generator" content="DocBook XSL Stylesheets V1.64.1"><link rel="home" href="index.html" title="The RVC Protocol (draft 6!)"><link rel="up" href="index.html" title="The RVC Protocol (draft 6!)"><link rel="previous" href="ar01s04.html" title="
+   Representation of text display
+  "></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="navheader"><table width="100%" summary="Navigation header"><tr><th colspan="3" align="center">
+   RVC Protocol
+  </th></tr><tr><td width="20%" align="left"><a accesskey="p" href="ar01s04.html">Prev</a> </td><th width="60%" align="center"> </th><td width="20%" align="right"> </td></tr></table><hr></div><div class="section" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="protocol"></a>
+   RVC Protocol
+  </h2></div></div><div></div></div><p>
+   The RVC protocol, like the RFB protocol, can operate over any
+   reliable transport.  RVC also has an initial handshaking phase.
+  </p><p>
+   The initial handshaking for RVC consists of
+   <tt class="literal">ProtocolVersion</tt>,
+   <tt class="literal">Authentication</tt>,
+   <tt class="literal">ServerInitialisation</tt> and
+   <tt class="literal">ClientInitialisation</tt> messages.  Both sides of
+   the protocol send <tt class="literal">ProtocolVersion</tt>; the feature
+   set to use is negotiated in the initialisation messages.
+  </p><p>
+   The messages begin with a <tt class="literal">message-type</tt> byte
+   followed by message-specific data.  However, the message formats
+   and their message types differ significantly from those in the RFB
+   protocol.
+  </p><p>
+   The messages are in network byte order.
+  </p><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="handshake"></a>
+    Handshake messages
+   </h3></div></div><div></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="id2799766"></a>
+     <tt class="literal">ProtocolVersion</tt>
+    </h4></div></div><div></div></div><p>
+     The server first sends the client a
+     <tt class="literal">ProtocolVersion</tt> message, to which the client
+     responds with a similar message detailing the protocol to
+     actually use.
+    </p><p>
+     Minor increments in the version number should be feature
+     additions (new messages/features) that the server may
+     <span class="emphasis"><em>optionally</em></span> provide.
+    </p><p>
+     Versions of the protocol that differ in major number are probably
+     not compatible with one another.
+    </p><p>
+     The <tt class="literal">ProtocolVersion</tt> message is the same as in
+     RFB: 12 ASCII bytes.  For RVC, they are as follows.
+    </p><div class="table"><a name="id2799813"></a><p class="title"><b>Table 1. 
+      ProtocolVersion
+     </b></p><table summary="
+      ProtocolVersion
+     " border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th colspan="4" align="left">Value</th></tr></thead><tbody><tr><td align="left">12</td><td colspan="4" align="left">"RVC 001.000\n" (hex 52 56 43 20
+	30 30 31 30 30 0a)</td></tr></tbody></table></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="auth"></a>
+     <tt class="literal">Authentication</tt>
+    </h4></div></div><div></div></div><p>
+     The <tt class="literal">Authentication</tt> message is just the same as
+     in RFB.
+    </p><div class="table"><a name="id2799922"></a><p class="title"><b>Table 2. <tt class="literal">Authentication</tt></b></p><table summary="Authentication" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th colspan="2" align="left">Description</th></tr></thead><tbody><tr><td align="left">4</td><td align="left">uint32_t</td><td align="left"> </td><td colspan="2" align="left">authentication-scheme:</td></tr><tr><td align="left"> </td><td align="left"> </td><td align="left">0</td><td colspan="2" align="left"><span class="emphasis"><em>connection failed</em></span></td></tr><tr><td align="left"> </td><td align="left"> </td><td align="left">1</td><td colspan="2" align="left"><span class="emphasis"><em>no authentication</em></span></td></tr><tr><td align="left"> </td><td align="left"> </td><td align="left">2</td><td colspan="2" align="left"><span class="emphasis"><em>VNC authentication</em></span></td></tr></tbody></table></div><p>
+     This is followed by data specific to the authentication-scheme:
+    </p><div class="itemizedlist"><ul type="disc"><li><p>
+       <span class="emphasis"><em>connection failed</em></span>---for some reason the
+       connection failed.  This is followed by an ASCII string
+       describing why.
+      </p><div class="table"><a name="id2798971"></a><p class="title"><b>Table 3. <span class="emphasis"><em>connection failed</em></span></b></p><table summary="connection failed" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th colspan="2" align="left">Description</th></tr></thead><tbody><tr><td align="left">4</td><td align="left">uint32_t</td><td align="left"> </td><td colspan="2" align="left">reason-length</td></tr><tr><td align="left">reason-length</td><td align="left">uint8_t[]</td><td align="left"> </td><td colspan="2" align="left">reason-string</td></tr></tbody></table></div><p>
+       For connection-based transports, the server closes the
+       connection after sending this message.
+      </p></li><li><p>
+       <span class="emphasis"><em>no authentication</em></span>---no authentication is
+       needed and the protocol continues to
+       <tt class="literal">ServerInitialisation</tt>.
+      </p></li><li><p>
+       <span class="emphasis"><em>VNC authentication</em></span>---VNC authentication is
+       to be used.  This is adequately described in the RFB protocol
+       description and is not covered here.
+      </p></li></ul></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="serverinit"></a>
+     <tt class="literal">ServerInitialisation</tt>
+    </h4></div></div><div></div></div><p>
+     The RVC server advertises to the client which features it can
+     provide using the <tt class="literal">ServerInitialisation</tt>
+     message.
+    </p><div class="table"><a name="id2799153"></a><p class="title"><b>Table 4. <tt class="literal">ServerInitialisation</tt></b></p><table summary="ServerInitialisation" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th colspan="2" align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">0</td><td colspan="2" align="left">message-type</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td colspan="2" align="left">num-features</td></tr><tr><td align="left">num-features</td><td align="left">uint8_t[]</td><td align="left"> </td><td colspan="2" align="left">feature-list</td></tr></tbody></table></div><p>
+     Features that can appear in the feature-list are:
+    </p><div class="table"><a name="id2799294"></a><p class="title"><b>Table 5. Features</b></p><table summary="Features" border="1"><colgroup><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">Feature</th><th colspan="2" align="left">Description</th></tr></thead><tbody><tr><td align="left">0</td><td colspan="2" align="left"><tt class="literal">Key</tt> message</td></tr><tr><td align="left">1</td><td colspan="2" align="left"><tt class="literal">Pointer</tt> message</td></tr><tr><td align="left">2</td><td colspan="2" align="left">Incremental rectangle updates</td></tr><tr><td align="left">3</td><td colspan="2" align="left">Incremental scroll updates</td></tr><tr><td align="left">4</td><td colspan="2" align="left">Clear screen updates</td></tr><tr><td align="left">5</td><td colspan="2" align="left">Console cropping</td></tr><tr><td align="left">6</td><td colspan="2" align="left">Console switch reporting</td></tr><tr><td align="left">7</td><td colspan="2" align="left">Console display locking</td></tr><tr><td align="left">8</td><td colspan="2" align="left">Console input locking</td></tr><tr><td align="left">9</td><td colspan="2" align="left">Shareable session</td></tr><tr><td align="left">10</td><td colspan="2" align="left">VNC server integration</td></tr><tr><td align="left">11</td><td colspan="2" align="left">Console switching</td></tr><tr><td align="left">12</td><td colspan="2" align="left">Console pushing</td></tr></tbody></table></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="clientinit"></a>
+     <tt class="literal">ClientInitialisation</tt>
+    </h4></div></div><div></div></div><p>
+     The <tt class="literal">ClientInitialisation</tt> is a response to the
+     <tt class="literal">ServerInitialisation</tt> message.
+    </p><div class="table"><a name="id2860377"></a><p class="title"><b>Table 6. <tt class="literal">ClientInitialisation</tt></b></p><table summary="ClientInitialisation" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th colspan="2" align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">255</td><td colspan="2" align="left">message-type</td></tr><tr><td align="left">3</td><td align="left">uint8_t[]</td><td class="auto-generated"> </td><td colspan="2" align="left">Padding</td></tr><tr><td align="left">4</td><td align="left">uint32_t</td><td align="left"> </td><td colspan="2" align="left">Minimum incremental update period (ms)</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td colspan="2" align="left">Rows</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td colspan="2" align="left">Columns</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">0</td><td colspan="2" align="left">Special flags</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td colspan="2" align="left">num-features</td></tr><tr><td align="left">num-features</td><td align="left">uint8_t[]</td><td align="left"> </td><td colspan="2" align="left">features-requested</td></tr></tbody></table></div><p>
+     The client specifies the minimum amount of time between
+     unsolicited incremental updates in milliseconds.
+    </p><p>
+     It also specifies the number of rows and columns that it has.
+     This information is only needed if the console cropping feature
+     is used.
+    </p><p>
+     The features-requested array refers to the features advertised in
+     the <tt class="literal">ServerInitialisation</tt> message; if
+     num-features exceeds the number of features advertised, the
+     excess are ignored.
+    </p><p>
+     A zero value for a feature request means that the feature must
+     not be used; a value of 1 means that it may be used.
+    </p><p>
+     If the console pushing feature is in use, the server and client
+     swap roles, and the original client must send the original server
+     a <tt class="literal">ServerInitialisation</tt> message, which may
+     <span class="emphasis"><em>not</em></span> advertise the console pushing feature.
+    </p></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="client"></a>
+    Client-originated messages
+   </h3></div></div><div></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="update"></a>
+     <tt class="literal">FullUpdateRequest</tt>
+    </h4></div></div><div></div></div><p>
+     In order to request a full console update, the client uses this
+     message.  Incremental updates not covering the entire console
+     area will not be sent by the server until it receives and
+     responds to this message.
+    </p><div class="table"><a name="id2860678"></a><p class="title"><b>Table 7. <tt class="literal">FullUpdateRequest</tt></b></p><table summary="FullUpdateRequest" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">254</td><td align="left">message-type</td></tr></tbody></table></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="key"></a>
+     <tt class="literal">Key</tt>
+    </h4></div></div><div></div></div><p>
+     If the <tt class="literal">Key</tt> feature is in use, the client
+     can send a key to the RVC server.
+    </p><div class="table"><a name="id2860784"></a><p class="title"><b>Table 8. <tt class="literal">Key</tt></b></p><table summary="Key" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">253</td><td align="left">message-type</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">key</td></tr></tbody></table></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="pointer"></a>
+     <tt class="literal">Pointer</tt>
+    </h4></div></div><div></div></div><p>
+     If the <tt class="literal">Pointer</tt> feature is in use, the
+     client can send a pointer event to the RVC server.
+    </p><div class="table"><a name="id2860905"></a><p class="title"><b>Table 9. <tt class="literal">Pointer</tt></b></p><table summary="Pointer" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">252</td><td align="left">message-type</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">x position</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">y position</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">button-mask</td></tr></tbody></table></div><p>
+     The x and y positions are zero-based, from the top left hand
+     corner.  The current state of buttons 1 to 8 are represented by
+     bits 0 to 7 of button-mask respectively, 0 meaning up, 1 meaning
+     down.
+    </p></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="switchrequest"></a>
+     <tt class="literal">SwitchRequest</tt>
+    </h4></div></div><div></div></div><p>
+     A <tt class="literal">SwitchRequest</tt> can be used to try to change
+     the active console.  If successful, a <tt class="literal">Switch</tt>
+     message will be generated (if allowed).  Note that if the active
+     console is under programmatic control, the switch request may
+     silently fail.
+    </p><div class="table"><a name="id2861073"></a><p class="title"><b>Table 10. <tt class="literal">SwitchRequest</tt></b></p><table summary="SwitchRequest" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">251</td><td align="left">message-type</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">virtual console number</td></tr></tbody></table></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="TerminateC"></a>
+     <tt class="literal">Terminate</tt>
+    </h4></div></div><div></div></div><p>
+     A <tt class="literal">Terminate</tt> message causes the server to go
+     back to its initial state (awaiting
+     <tt class="literal">ProtocolVersion</tt>), if the connection is still
+     valid.
+    </p><div class="table"><a name="id2861202"></a><p class="title"><b>Table 11. <tt class="literal">Terminate</tt></b></p><table summary="Terminate" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">128</td><td align="left">message-type</td></tr></tbody></table></div></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="server"></a>
+    Server-originated messages
+   </h3></div></div><div></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="incr"></a>
+     <tt class="literal">IncrementalUpdate</tt>
+    </h4></div></div><div></div></div><p>
+     If the incremental update feature is not in use, any
+     <tt class="literal">IncrementalUpdate</tt> messages must cover the
+     entire console area.
+    </p><div class="table"><a name="id2861317"></a><p class="title"><b>Table 12. <tt class="literal">IncrementalUpdate</tt></b></p><table summary="IncrementalUpdate" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">1</td><td align="left">message-type</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">update-type:</td></tr><tr><td align="left"> </td><td align="left"> </td><td align="left">0</td><td align="left">rectangle</td></tr><tr><td align="left"> </td><td align="left"> </td><td align="left">1</td><td align="left">scroll</td></tr><tr><td align="left"> </td><td align="left"> </td><td align="left">2</td><td align="left">clear</td></tr><tr><td align="left">2</td><td align="left">uint16_t</td><td align="left">n</td><td align="left">content-length</td></tr><tr><td align="left">n</td><td align="left">uint8_t[]</td><td align="left"> </td><td align="left">contents</td></tr></tbody></table></div><p>
+     A client must support rectangle type updates.  Other types of
+     update will only be sent if the corresponding feature is in use.
+    </p><p>
+     The header is followed by type-specific data.
+    </p><div class="itemizedlist"><ul type="disc"><li><p>
+       For <tt class="literal">rectangle</tt> updates the header is followed
+       by:
+      </p><div class="table"><a name="id2861550"></a><p class="title"><b>Table 13. <tt class="literal">rectangle</tt></b></p><table summary="rectangle" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">x offset</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">y offset</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">rows</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">columns</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">x position</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">y position</td></tr><tr><td align="left">2*rows*columns</td><td align="left">uint8_t[]</td><td align="left"> </td><td align="left">contents</td></tr></tbody></table></div><p>
+       The contents are sent in rows, with the first byte of a
+       (row,column) entry being the character at that position, and the
+       second being the attributes.  The attribute byte takes the form
+       of VGA text mode character attributes.
+      </p></li><li><p>
+       For <tt class="literal">scroll</tt> updates the header is followed
+       by:
+      </p><div class="table"><a name="id2861742"></a><p class="title"><b>Table 14. <tt class="literal">scroll</tt></b></p><table summary="scroll" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">lines to scroll</td></tr></tbody></table></div></li><li><p>
+       For <tt class="literal">clear</tt> updates nothing else follows the
+       header.
+      </p><p>
+       The intent of a <tt class="literal">clear</tt> update is to tell the
+       client to clear its terminal.
+      </p></li></ul></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h4 class="title"><a name="switch"></a>
+     <tt class="literal">Switch</tt>
+    </h4></div></div><div></div></div><p>
+     If the console switch reporting feature is in use, this message
+     may be sent.
+    </p><div class="table"><a name="id2861866"></a><p class="title"><b>Table 15. <tt class="literal">Switch</tt></b></p><table summary="Switch" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">2</td><td align="left">message-type</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">virtual console number</td></tr><tr><td align="left">2</td><td align="left">uint16_t</td><td align="left"> </td><td align="left">port number</td></tr><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left"> </td><td align="left">mode (0 for text)</td></tr></tbody></table></div><p>
+     The port number is one on which an RFB server is accepting
+     connections for that display, or zero if there is no such server.
+    </p></div></div><div class="section" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="TerminateS"></a>
+     <tt class="literal">Terminate</tt>
+    </h3></div></div><div></div></div><p>
+     A <tt class="literal">Terminate</tt> message causes the client to go
+     back to its initial state (send
+     <tt class="literal">ProtocolVersion</tt>), if the connection is still
+     valid.
+    </p><div class="table"><a name="id2862030"></a><p class="title"><b>Table 16. <tt class="literal">Terminate</tt></b></p><table summary="Terminate" border="1"><colgroup><col align="left"><col align="left"><col align="left"><col align="left"></colgroup><thead><tr><th align="left">No. of bytes</th><th align="left">Type</th><th align="left">Value</th><th align="left">Description</th></tr></thead><tbody><tr><td align="left">1</td><td align="left">uint8_t</td><td align="left">128</td><td align="left">message-type</td></tr></tbody></table></div></div></div><div class="navfooter"><hr><table width="100%" summary="Navigation footer"><tr><td width="40%" align="left"><a accesskey="p" href="ar01s04.html">Prev</a> </td><td width="20%" align="center"><a accesskey="u" href="index.html">Up</a></td><td width="40%" align="right"> </td></tr><tr><td width="40%" align="left" valign="top">
+   Representation of text display
+   </td><td width="20%" align="center"><a accesskey="h" href="index.html">Home</a></td><td width="40%" align="right" valign="top"> </td></tr></table></div></body></html>

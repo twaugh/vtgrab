@@ -35,8 +35,8 @@ void update_panels (void)
 		touchwin (p->wnd);
 		if (p->is_pad)
 			pnoutrefresh (p->wnd, p->pminrow, p->pmincol,
-				      p->sminrow, p->smincol, p->smaxrow,
-				      p->smaxcol);
+				      p->sminrow, p->smincol, p->smaxrow - 1,
+				      p->smaxcol - 1);
 		else
 			wnoutrefresh (p->wnd);
 		

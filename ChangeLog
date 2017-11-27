@@ -1,3 +1,30 @@
+2004-01-21  Tim Waugh  <twaugh@redhat.com>
+
+	* configure.in: Version 0.1.9.
+
+2004-01-21  Tim Waugh  <twaugh@redhat.com>
+
+	* nrvc.c: Avoid A_UNDERLINE problems by using A_BOLD instead.
+
+	* simple_panel.c (update_panels): Fix pnoutrefresh call.
+
+	* vtgrab.spec.in: Use tar.bz2.  Build PDF documentation.
+
+	* configure.in: Updated.  Use dist-bzip2.
+
+	* Makefile.am: Use xmlto to create HTML documentation.  Don't install
+	it (leave that to the spec file).
+
+	* doc/rvc.sgml: Convert to DocBook XML 4.2, fixing some invalid
+	bits.
+
+	* xfree86.c (exec_minion): Use x0vncserver (VNC 4.0) if
+	available.
+
+2000-11-03  Tim Waugh  <twaugh@redhat.com>
+
+	* configure.in: Version 0.1.8.
+
 2000-11-03  Tim Waugh  <twaugh@redhat.com>
 
 	* doc/rvc.sgml: Draft 6.  Now includes clear updates.

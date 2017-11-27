@@ -1,5 +1,26 @@
-/* The task is to locate the X server associated with a tty, figure
- * out which display it is, and grab a valid MIT cookie for it. */
+/*
+ * vtgrab - grab the foreground console for display on another machine
+ * Copyright (C) 2000, 2004  Tim Waugh <twaugh@redhat.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *
+ *
+ * In this file the task is to locate the X server associated with a
+ * tty, figure out which display it is, and grab a valid MIT cookie
+ * for it.
+ */
 
 #include <ctype.h>
 #include <dirent.h>
@@ -206,10 +227,19 @@ static pid_t exec_minion (struct consolemap *cons)
 		close (STDERR_FILENO);
 		dup (null); /* stdin */
 		dup (null); /* stdout */
+#if 0
 		dup (fildes[1]); /* stderr */
+#else
+		dup (null); /* stderr */
+#endif /* 0 */
 		close (null);
 		close (fildes[0]);
 		close (fildes[1]);
+		/* Try x0vncserver (VNC 4.0) first. */
+		execlp ("x0vncserver", "x0vncserver", "-rfbport=5900",
+			"SecurityTypes=None", NULL);
+
+		/* If that failed, try x0rfbserver (RFB package). */
 		execlp ("x0rfbserver", "x0rfbserver", "--stealth", NULL);
 		exit (1);
 	}
@@ -219,10 +249,13 @@ static pid_t exec_minion (struct consolemap *cons)
 
 	cons->port = 5900;
 	f = fdopen (fildes[0], "r");
+#if 0
 	line = NULL;
 	linelen = 0;
 	getline (&line, &linelen, f);
+#endif /* 0 */
 	fclose (f);
+#if 0
 	if (line && strstr (line, "port")) {
 		char *p = line;
 		char *end;
@@ -232,6 +265,7 @@ static pid_t exec_minion (struct consolemap *cons)
 		if (p != end)
 			cons->port = d;
 	}
+#endif /* 0 */
 	return minion;
 }
 
