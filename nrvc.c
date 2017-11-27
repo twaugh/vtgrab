@@ -320,12 +320,13 @@ static int main_menu (int fd, int key)
 
 static void update_display_panel (void)
 {
-	int slop = 5;
+	int slop;
 	WINDOW *wnd = panel_window (display);
 	int curx, cury, maxx, maxy, pmaxx, pmaxy;
 	getyx (wnd, cury, curx);
 	getmaxyx (wnd, pmaxy, pmaxx);
 	getmaxyx (stdscr, maxy, maxx);
+	slop = maxy / 3;
 	if (curx < display_pmincol) {
 		display_pmincol = curx - slop;
 		if (display_pmincol < 0)
@@ -348,6 +349,23 @@ static void update_display_panel (void)
 	}
 	panel_is_pad (display, display_pminrow, display_pmincol, 0, 0,
 		      maxy, maxx);
+}
+
+static int create_display_panel (int lines, int cols)
+{
+	WINDOW *wnd = newpad (lines, cols);
+	if (!wnd)
+		return 1;
+
+	werase (wnd);
+	display = new_panel (wnd);
+	if (!display)
+		return 1;
+
+	bottom_panel (display);
+	display_pmincol = 0;
+	display_pminrow = 0;
+	return 0;
 }
 
 static int handle_update (int fd)
@@ -384,26 +402,23 @@ static int handle_update (int fd)
 	if (update_type != UpdateType_Rectangle)
 		return 1;
 
-	if (!display) {
-		if (contents[0] || contents[1])
-			// Need full update
-			return 1;
+	if (!contents[0] && !contents[1]) {
+		if (display) {
+			int y, x;
+			wnd = panel_window (display);
+			getmaxyx (wnd, y, x);
+			if (contents[2] > y || contents[3] > x) {
+				wresize (wnd, contents[2], contents[3]);
+				werase (wnd);
+				wmove (wnd, 0, 0);
+			}
+		} else {
+			if (create_display_panel (contents[2], contents[3]))
+				return 1;
+		}
+	}
 
-		wnd = newpad (contents[2], contents[3]);
-		if (!wnd)
-			return 1;
-
-		display = new_panel (wnd);
-		if (!display)
-			return 1;
-
-		bottom_panel (display);
-		display_pmincol = 0;
-		display_pminrow = 0;
-	} else
-		wnd = panel_window (display);
-
-	// TODO: check that we aren't going to write over the end of the pad
+	wnd = panel_window (display);
 
 	for (y = 0; y < contents[2]; y++) {
 		uint8_t *p;
@@ -784,6 +799,7 @@ static int client (int fd)
 	 **/
 	ci.updatems = 0;
 	getmaxyx (stdscr, ci.rows, ci.cols);
+	create_display_panel (ci.rows, ci.cols);
 	ci.pad1 = ci.pad2 = ci.pad3 = ci.pad4 = 0;
 	ci.num_features = num_features;
 	if (write_exact (fd, &ci, sizeof (ci)))

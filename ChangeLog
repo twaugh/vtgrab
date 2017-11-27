@@ -1,3 +1,20 @@
+2000-09-17  Tim Waugh  <twaugh@redhat.com>
+
+	* configure.in: Version 0.1.4.
+
+2000-09-17  Tim Waugh  <twaugh@redhat.com>
+
+	* nrvc.c (handle_update): Resize pad when necessary.
+	(create_display_panel): New function.
+	(client): Create display panel first.
+	(update_display_panel): Make sloppiness dependent on window size.
+
+	* rvc.c (send_key): Use unsigned char for message.
+	
+	* rvcd.c (server_loop): Only send an update if in text mode.
+	(send_switch): Only track XFree86 on switches to non-text
+	mode virtual terminals.
+
 2000-09-15  Tim Waugh  <twaugh@redhat.com>
 
 	* configure.in: Version 0.1.3.

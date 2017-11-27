@@ -155,7 +155,7 @@ static void skip (int fd, int n)
 
 static int send_key (int fd)
 {
-	char keymsg[2];
+	unsigned char keymsg[2];
 	keymsg[0] = Msg_Key;
 	if (read (STDIN_FILENO, &keymsg[1], 1) < 1)
 		return 1;

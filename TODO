@@ -3,12 +3,14 @@ General:
 - Don't use automake any more since it can't handle non-recursive make
 - Write a program to push a console screen from the client to the
   server(s)
+- Locking
 
 RVCD:
 
 - Handle Feature_Crop and Feature_IncRectangle simultaneously
 - Handle Feature_Push
 - Mouse support
+- Track console switches (for XFree86 tracking) all the time.
 
 NRVC:
 

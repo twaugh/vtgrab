@@ -71,7 +71,8 @@ docdir = $(datadir)/doc/$(PACKAGE)
 doc_DATA = doc/rvc
 CFLAGS = -D_GNU_SOURCE -Wall -W -O2
 
-EXTRA_DIST = BUGS doc/rvc.sgml doc/README rvc.h xfree86.h TODO Makefile.am
+EXTRA_DIST = BUGS doc/rvc.sgml doc/README rvc.h xfree86.h simple_panel.h 		TODO Makefile.am
+
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 mkinstalldirs = $(SHELL) $(top_srcdir)/mkinstalldirs
 CONFIG_HEADER = config.h
@@ -310,6 +311,11 @@ distdir: $(DISTFILES)
 	    || cp -p $$d/$$file $(distdir)/$$file || :; \
 	  fi; \
 	done
+nrvc.o: nrvc.c config.h rvc.h simple_panel.h
+rvc.o: rvc.c config.h rvc.h
+rvcd.o: rvcd.c config.h rvc.h xfree86.h
+simple_panel.o: simple_panel.c simple_panel.h
+xfree86.o: xfree86.c
 
 info-am:
 info: info-am

@@ -372,7 +372,8 @@ static int send_switch (int fd, char mode)
 {
 	unsigned short port;
 	uint8_t switchmsg[5];
-	vt_switched_to (vtstat.v_active);
+	if (mode != KD_TEXT)
+		vt_switched_to (vtstat.v_active);
 	port = port_for_console (vtstat.v_active);
 	switchmsg[0] = Msg_Switch;
 	switchmsg[1] = vtstat.v_active;
@@ -501,17 +502,17 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 			}
 			size = read (c, contents, MAX_CONTENTS);
 			close (c);
+
+			if (do_full_update)
+				full_update (fd, contents, size, rows, cols);
+			else if (memcmp (last, contents, size)) {
+				incr_update (fd, last, contents, size, rows,
+					     cols);
+				memcpy (last, contents, size);
+			}
 		} else if (size) {
 			size = 0;
 			memset (last, 0, MAX_CONTENTS);
-		}
-
-		if (do_full_update)
-			full_update (fd, contents, size, rows, cols);
-		else if (memcmp (last, contents, size)) {
-			incr_update (fd, last, contents, size, rows,
-				     cols);
-			memcpy (last, contents, size);
 		}
 
 		go = 1;
