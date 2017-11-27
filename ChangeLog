@@ -1,3 +1,19 @@
+2000-11-02  Tim Waugh  <twaugh@redhat.com>
+
+	* configure.in: Version 0.1.7.
+
+2000-11-02  Tim Waugh  <twaugh@redhat.com>
+
+	* rvcd.c (server): Zero in_use array.
+	(incr_update): Debug logging.
+	(main): Use 9600 baud, as it's more reliable.
+	(scroll_update): New function.  Implement scroll updates.
+	(incr_update): Use it.
+	(incr_update): Smarter single-line updates.
+	* nrvc.c (do_scroll): New function.  Implement scroll updates.
+	(handle_update): Use it.
+	(handle_update): Bug-fix for partial line updates.
+
 2000-10-10  Tim Waugh  <twaugh@redhat.com>
 
 	* configure.in: Version 0.1.6.

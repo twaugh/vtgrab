@@ -48,6 +48,7 @@ static uint8_t features[] = {
 	Feature_Crop,
 	Feature_Key,
 	Feature_IncRectangle,
+	Feature_IncScroll,
 	Feature_SwitchRequest,
 	Feature_Switch,
 };
@@ -200,6 +201,18 @@ static int full_update (int fd, unsigned char *contents, size_t size,
 	return 0;
 }
 
+static int scroll_update (FILE *f, uint8_t lines)
+{
+	uint8_t message[5];
+	message[0] = Msg_IncrementalUpdate;
+	message[1] = UpdateType_Scroll;
+	message[2] = 0;
+	message[3] = 1;
+	message[4] = lines;
+	fwrite (message, 5, 1, f);
+	return 0;
+}
+
 static int incr_update (int fd, unsigned char *last, unsigned char *contents,
 			size_t size, uint8_t rows, uint8_t cols)
 {
@@ -214,13 +227,15 @@ static int incr_update (int fd, unsigned char *last, unsigned char *contents,
 		// Easier just to do a full screen update for this.
 		return full_update (fd, contents, size, rows, cols);
 
+	log ("> IncrUpdate\n");
 	newfd = dup (fd);
 	f = fdopen (newfd, "r+");
 	if (!f)
 		return 1;
 
-	// Compare line by line
 	rows = contents[0];
+
+	// Compare line by line
 	for (i = 0; i < rows; i++)
 		if (memcmp (contents + 4 + i * rowsize, last + 4 + i * rowsize,
 			    rowsize))
@@ -234,20 +249,72 @@ static int incr_update (int fd, unsigned char *last, unsigned char *contents,
 
 	last_changed = i;
 
+	// Look for scrolls
+	if (contents[3] == rows - 1) {
+		uint8_t tryscrl, num;
+
+		for (tryscrl = 1; tryscrl < rows - 1; tryscrl++) {
+			const int min = 5;
+			uint8_t *old = last + 4 + tryscrl * rowsize;
+			uint8_t *new = contents + 4;
+			for (num = rows - 1 - tryscrl; num >= min; num--)
+				if (!memcmp (old, new, num * rowsize))
+					break;
+			if (num >= min)
+				break;
+		}
+
+		// Wahey!
+		log ("? Scroll %d: %d, %d\n", tryscrl, first_changed,
+		     last_changed);
+		if (tryscrl < rows - 1 &&
+		    tryscrl < (last_changed - first_changed)) {
+			log ("> Scroll %d\n", tryscrl);
+			scroll_update (f, tryscrl);
+			// Mess with scr so that left-overs get dealt with.
+			memcpy (contents + 4, last + 4 + tryscrl * rowsize,
+				(rows - tryscrl) * rowsize);
+			memset (contents + 4 + (rows - tryscrl) * rowsize, 0,
+				tryscrl * rowsize);
+			goto out;
+		}
+	}
+
 	header[0] = Msg_IncrementalUpdate;
 	header[1] = UpdateType_Rectangle;
-	size = (last_changed - first_changed + 1) * rowsize;
+
+	// If it's just one line, be smarter.
+	if (first_changed == last_changed) {
+		uint8_t firstx, lastx;
+		uint8_t *cp = contents + 4 + first_changed * rowsize;
+		uint8_t *lp = last + 4 + first_changed * rowsize;
+		for (firstx = 0; firstx < contents[1]; firstx++)
+			if (memcmp (cp + firstx * 2, lp + firstx * 2, 2))
+				break;
+		for (lastx = contents[1] - 1; lastx > firstx; lastx--)
+			if (memcmp (cp + lastx * 2, lp + lastx * 2, 2))
+				break;
+		size = (lastx - firstx + 1) * 2;
+		header[2] = 0;
+		header[3] = 6 + (lastx - firstx + 1) * 2;
+		header[4] = firstx;
+	} else {
+		size = (last_changed - first_changed + 1) * rowsize;
+		header[4] = 0; // x offset
+	}
+
 	content_length = 6 + size;
 	content_length = htons (content_length);
 	memcpy (header + 2, &content_length, 2);
-	header[4] = 0; // x offset
 	header[5] = first_changed; // y offset
 	header[6] = last_changed - first_changed + 1;
 	header[7] = contents[1];
 	header[8] = contents[2];
 	header[9] = contents[3];
 	fwrite (header, 10, 1, f);
-	fwrite (contents + 4 + first_changed * rowsize, size, 1, f);
+	fwrite (contents + 4 + first_changed * rowsize + 2 * header[4],
+		size, 1, f);
+out:
 	fclose (f);
 
 	return 0;
@@ -507,9 +574,10 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 			size = read (c, contents, MAX_CONTENTS);
 			close (c);
 
-			if (do_full_update)
+			if (do_full_update) {
 				full_update (fd, contents, size, rows, cols);
-			else if (memcmp (last, contents, size)) {
+				memcpy (last, contents, size);
+			} else if (memcmp (last, contents, size)) {
 				incr_update (fd, last, contents, size, rows,
 					     cols);
 				memcpy (last, contents, size);
@@ -644,6 +712,7 @@ static int server (int fd)
 		return log ("Problem receiving feature list\n");
 	}
 
+	memset (in_use, 0, sizeof (in_use));
 	for (i = 0; i < sizeof (features); i++) {
 		if (buf[i]) {
 			in_use[features[i]] = 1;
@@ -726,8 +795,8 @@ int main (int argc, char **argv)
 		struct termios tios;
 		tcgetattr (fd, &tios);
 		cfmakeraw (&tios);
-		cfsetospeed (&tios, B57600);
-		cfsetispeed (&tios, B57600);
+		cfsetospeed (&tios, B9600);
+		cfsetispeed (&tios, B9600);
 		tcsetattr (fd, TCSANOW, &tios);
 		tcflush (fd, TCIOFLUSH);
 	}

@@ -50,6 +50,7 @@
 static uint8_t wishlist[] = {
 	Feature_Key,
 	Feature_IncRectangle,
+	Feature_IncScroll,
 	Feature_SwitchRequest,
 	Feature_Switch,
 };
@@ -384,6 +385,18 @@ static int create_display_panel (int lines, int cols)
 	return 0;
 }
 
+static int do_scroll (uint8_t lines)
+{
+	WINDOW *wnd = panel_window (display);
+	scrollok (wnd, 1);
+	wscrl (wnd, lines);
+	update_display_panel ();
+	update_panels ();
+	doupdate ();
+	scrollok (wnd, 0);
+	return 0;
+}
+
 static int handle_update (int fd)
 {
 	static uint8_t *contents = NULL;
@@ -414,6 +427,9 @@ static int handle_update (int fd)
 
 	if (read_exact (fd, contents, content_length))
 		return 1;
+
+	if (display && update_type == UpdateType_Scroll)
+		return do_scroll (contents[0]);
 
 	if (update_type != UpdateType_Rectangle)
 		return 1;
@@ -450,7 +466,10 @@ static int handle_update (int fd)
 		uint8_t *p;
 		p = contents + 6;
 		p += y * 2 * contents[3];
-		for (x = 0; x < contents[3]; x++) {
+		for (x = 0;
+		     x < contents[3] &&
+		     (6 + 2 * y * contents[3] + 2 * x + 1) < content_length;
+		     x++) {
 			uint8_t attrbyte = p[2 * x + 1];
 			int attr = 0;
 			int fg, bg;
@@ -1002,8 +1021,8 @@ int main (int argc, char *argv[])
 		struct termios tios;
 		tcgetattr (fd, &tios);
 		cfmakeraw (&tios);
-		cfsetospeed (&tios, B57600);
-		cfsetispeed (&tios, B57600);
+		cfsetospeed (&tios, B9600);
+		cfsetispeed (&tios, B9600);
 		tcsetattr (fd, TCSANOW, &tios);
 		tcflush (fd, TCIOFLUSH);
 	}

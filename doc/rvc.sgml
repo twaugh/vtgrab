@@ -439,38 +439,34 @@
        </row>
        <row>
 	<entry>4</entry>
-	<entry spanname="description">Incremental write updates</entry>
-       </row>
-       <row>
-	<entry>5</entry>
 	<entry spanname="description">Console cropping</entry>
        </row>
        <row>
-	<entry>6</entry>
+	<entry>5</entry>
 	<entry spanname="description">Console switch reporting</entry>
        </row>
        <row>
-	<entry>7</entry>
+	<entry>6</entry>
 	<entry spanname="description">Console display locking</entry>
        </row>
        <row>
-	<entry>8</entry>
+	<entry>7</entry>
 	<entry spanname="description">Console input locking</entry>
        </row>
        <row>
-	<entry>9</entry>
+	<entry>8</entry>
 	<entry spanname="description">Shareable session</entry>
        </row>
        <row>
-	<entry>10</entry>
+	<entry>9</entry>
 	<entry spanname="description">VNC server integration</entry>
        </row>
        <row>
-        <entry>11</entry>
+        <entry>10</entry>
         <entry spanname="description">Console switching</entry>
        </row>
        <row>
-	<entry>12</entry>
+	<entry>11</entry>
 	<entry spanname="description">Console pushing</entry>
        </row>
       </tbody>
@@ -869,15 +865,9 @@
 	<entry>rectangle</entry>
        </row>
        <row>
-	<entry></entry>
-	<entry></entry>
-	<entry>1</entry>
-	<entry>write</entry>
-       </row>
-       <row>
 	<entry rowsep="1"></entry>
 	<entry rowsep="1"></entry>
-	<entry rowsep="1">2</entry>
+	<entry rowsep="1">1</entry>
 	<entry rowsep="1">scroll</entry>
        </row>
        <row>
@@ -979,6 +969,38 @@
        second being the attributes.  The attribute byte takes the form
        of VGA text mode character attributes.
       </para>
+     </listitem>
+
+     <listitem>
+      <para>
+       For <literal>scroll</literal> updates the header is followed
+       by:
+      </para>
+
+      <table frame="all"><title><literal>scroll</literal></title>
+       <tgroup cols="4" align="left" colsep="1" rowsep="1">
+	<colspec colname="num">
+	<colspec colname="type">
+	<colspec colname="value">
+	<colspec colname="descr">
+	<thead>
+	 <row>
+	  <entry>No. of bytes</entry>
+	  <entry>Type</entry>
+	  <entry>Value</entry>
+	  <entry>Description</entry>
+	 </row>
+	</thead>
+	<tbody>
+	 <row>
+	  <entry>1</entry>
+	  <entry>uint8_t</entry>
+	  <entry></entry>
+	  <entry>lines to scroll</entry>
+	 </row>
+	</tbody>
+       </tgroup>
+      </table>
      </listitem>
     </itemizedlist>
    </section>
