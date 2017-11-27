@@ -1,3 +1,10 @@
+2000-07-28  Tim Waugh  <twaugh@redhat.com>
+
+	* vtgrab.c (VERSION): Version 0.1.0 (devel).
+
+	* doc/rvc.sgml: Added.
+	* doc/README: Added.
+
 2000-07-27  Tim Waugh  <twaugh@redhat.com>
 
 	(VERSION): Version 0.0.1 (stable).

@@ -1,0 +1,943 @@
+<!-- -*- sgml -*- -->
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook V3.1//EN"[
+<!ENTITY VNC "<application>VNC</application>">
+]>
+
+<article id=index>
+ <title>The RVC Protocol (draft!)</title>
+
+ <artheader>
+  <author>
+   <firstname>
+    Tim
+   </firstname>
+   <surname>
+    Waugh
+   </surname>
+
+   <affiliation>
+    <address>
+     <email>
+      twaugh@redhat.com
+     </email>
+    </address>
+   </affiliation>
+  </author>
+ </artheader>
+
+ <section id="intro">
+  <title>
+   Introduction
+  </title>
+
+  <para>
+   Throughout this document, a <firstterm>virtual console</firstterm>
+   refers to the active console of a machine; I acknowledge that for
+   some configuration that doesn't mean anything.  On Linux machines
+   with virtual consoles configured, there are effectively several
+   consoles, all multiplexed through the same display adapter.  The
+   operator can switch between them at will, and some may be
+   graphical while others are textual.
+  </para>
+
+  <para>
+   RVC (<quote>remote virtual console</quote>) is a protocol for
+   remote access to a computer's active virtual text console, and is
+   based on <ulink
+   url="http://www.uk.research.att.com/vnc/protocol.html">RFB</ulink>.
+   It allows a client to watch changes to the text console on which an
+   RVC server is running.
+  </para>
+
+  <para>
+   Like RFB, RVC makes the client stateless, meaning that a client can
+   disconnect and reconnect without affecting the actual console on
+   the server machine.
+  </para>
+ </section>
+
+ <section id="view">
+  <title>
+   Viewing
+  </title>
+
+  <para>
+   The viewing side of the protocol is split into three types of
+   update, based on common tasks for virtual consoles: writing text
+   at the cursor position, scrolling, and other arbitrary updates to
+   characters at certain positions on the screen (as well as cursor
+   position changes).
+  </para>
+
+  <para>
+   In addition, the server can report when the machine has switched to
+   a virtual console that is in a graphical mode, in order for the
+   client to be able to use RFB to get updates for that console.
+  </para>
+
+  <para>
+   Since different virtual consoles may have different sizes, the
+   server can report a console size change; the client may however
+   request that the server just sends the bottom left rectangle of a
+   console that is too large to display in its entirety.
+  </para>
+
+  <para>
+   Unlike RFB, RVC is not demand-driven by the client; the server will
+   send incremental updates as and when they happen.  However, the
+   client can request a full screen update explicitly.  Since text
+   consoles are not nearly as big as graphical ones, bandwidth
+   considerations don't warrant quite the same concern as with RFB.
+   However, the client can specify (at the beginning of the
+   connection) a maximum rate at which incremental updates are sent.
+  </para>
+ </section>
+
+ <section id="control">
+  <title>
+   Controlling
+  </title>
+
+  <para>
+   There is provision in the RVC protocol for the client to control
+   the console at the server (but the server may or may not allow
+   it).
+  </para>
+
+  <para>
+   This allows the console input to come from the RVT client instead
+   of (or as well as) an operator situated at the console.  The model
+   is of raw terminal input: characters are read from the console at
+   the client end in raw mode, and written in raw mode at the server
+   end.
+  </para>
+
+  <para>
+   This results in some differences between using an RVT client and
+   standing in front of the console, but it probably a lot easier to
+   implement on a lot of platforms.
+  </para>
+ </section>
+
+ <section id="text">
+  <title>
+   Representation of text display
+  </title>
+
+  <para>
+   The console representation is heavily biased towards the format of
+   <filename>/dev/vcsa<replaceable>n</replaceable></filename>.  The
+   console is just a rectangular array of characters (one byte each),
+   each of which has an associated attribute byte.  In addition there
+   is a cursor which may be placed over any of the characters.
+  </para>
+ </section>
+
+ <section id="protocol">
+  <title>
+   RVT Protocol
+  </title>
+
+  <para>
+   The RVC protocol, like the RFB protocol, can operate over any
+   reliable transport.  RVC also has an initial handshaking phase.
+  </para>
+
+  <para>
+   The initial handshaknig for RVC consists of
+   <literal>ProtocolVersion</literal>,
+   <literal>Authentication</literal>,
+   <literal>ServerInitialisation</literal> and
+   <literal>ClientInitialisation</literal> messages.  Both sides of
+   the protocol send <literal>ProtocolVersion</literal>; the feature
+   set to use is negotiated in the initialisation messages.
+  </para>
+
+  <para>
+   The of the messages begin with a <literal>message-type</literal>
+   byte followed by message-specific data.  However, the message
+   formats and their message types differ significanly from those in
+   the RFB protocol.
+  </para>
+
+  <section id="handshake">
+   <title>
+    Handshake messages
+   </title>
+
+   <section
+    <title>
+     <literal>ProtocolVersion</literal>
+    </title>
+
+    <para>
+     The server first sends the client a
+     <literal>ProtocolVersion</literal> message, to which the client
+     responds with a similar message detailing the protocol to
+     actually use.
+    </para>
+
+    <para>
+     Minor increments in the version number should be feature
+     additions (new messages/features) that the server may
+     <emphasis>optionally</emphasis> provide.
+    </para>
+
+    <para>
+     Version of the protocol that differ in major number are probably
+     not compatible with one another.
+    </para>
+
+    <para>
+     The <literal>ProtocolVersion</literal> message is the same as in
+     RFB: 12 ASCII bytes.  For RVC, they are as follows.
+    </para>
+
+    <table frame="all">
+     <title>
+      ProtocolVersion
+     </title>
+     <tgroup cols="5" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="value">
+      <colspec colname="v1">
+      <colspec colname="v2">
+      <colspec colname="v3">
+      <spanspec spanname="valuespan" namest="value" nameend="v3"
+       align="left">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry spanname="valuespan">Value</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>12</entry>
+	<entry spanname="valuespan">"RVC 001.000\n" (hex 52 56 43 20
+	30 30 31 30 30 0a)</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </section>
+
+   <section id="auth">
+    <title>
+     <literal>Authentication</literal>
+    </title>
+
+    <para>
+     The <literal>Authentication</literal> message is just the same as
+     RFB.
+    </para>
+
+    <table frame="all"><title><literal>Authentication</literal></title>
+     <tgroup cols="5" align="left" colsep="1" rowsep="0">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <colspec colname="descr2">
+      <spanspec spanname="description" namest="descr" nameend="descr2"
+       align="left">
+      <thead>
+       <row>
+	<entry rowsep="1">No. of bytes</entry>
+	<entry rowsep="1">Type</entry>
+	<entry rowsep="1">Value</entry>
+	<entry rowsep="1" spanname="description">Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>4</entry>
+	<entry>uint32_t</entry>
+	<entry></entry>
+	<entry spanname="description">authentication-scheme:</entry>
+       </row>
+       <row>
+	<entry></entry>
+	<entry></entry>
+	<entry>0</entry>
+	<entry spanname="description"><emphasis>connection failed</emphasis></entry>
+       </row>
+       <row>
+	<entry></entry>
+	<entry></entry>
+	<entry>1</entry>
+	<entry spanname="description"><emphasis>no authentication</emphasis></entry>
+       </row>
+       <row>
+	<entry></entry>
+	<entry></entry>
+	<entry>2</entry>
+	<entry spanname="description"><emphasis>VNC authentication</emphasis></entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+
+    <para>
+     This is followed by data specific to the authentication-scheme:
+    </para>
+
+    <itemizedlist>
+     <listitem>
+      <para>
+       <emphasis>connection failed</emphasis>---for some reason the
+       connection failed.  This is followed by an ASCII string
+       describing why.
+      </para>
+
+      <table frame="all"><title><emphasis>connection failed</emphasis></title>
+       <tgroup cols="5" align="left" colsep="1" rowsep="1">
+	<colspec colname="num">
+	<colspec colname="type">
+	<colspec colname="value">
+	<colspec colname="descr">
+	<colspec colname="descr2">
+	<spanspec spanname="description" namest="descr" nameend="descr2"
+	 align="left">
+	<thead>
+	 <row>
+	  <entry>No. of bytes</entry>
+	  <entry>Type</entry>
+	  <entry>Value</entry>
+	  <entry spanname="description">Description</entry>
+	 </row>
+	</thead>
+	<tbody>
+	 <row>
+	  <entry>4</entry>
+	  <entry>uint32_t</entry>
+	  <entry></entry>
+	  <entry spanname="description">reason-length</entry>
+	 </row>
+	 <row>
+	  <entry>reason-length</entry>
+	  <entry>uint8_t[]</entry>
+	  <entry></entry>
+	  <entry spanname="description">reason-string</entry>
+	 </row>
+	</tbody>
+       </tgroup>
+      </table>
+
+      <para>
+       For connection-based transports, the server closes the
+       connection after sending this message.
+      </para>
+     </listitem>
+
+     <listitem>
+      <para>
+       <emphasis>no authentication</emphasis>---no authentication is
+       need and the protocol continues to
+       <literal>ServerInitialisation</literal>.
+      </para>
+     </listitem>
+
+     <listitem>
+      <para>
+       <emphasis>VNC authentication</emphasis>---VNC authentication is
+       to be used.  This is adequately described in the RFB protocol
+       description and is not covered here.
+      </para>
+     </listitem>
+    </itemizedlist>
+   </section>
+
+   <section id="serverinit">
+    <title>
+     <literal>ServerInitialisation</literal>
+    </title>
+
+    <para>
+     The RVC server advertises to the client which features it can
+     provide using the <literal>ServerInitialisation</literal>
+     message.
+    </para>
+
+    <table frame="all"><title><literal>ServerInitialisation</literal></title>
+     <tgroup cols="5" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <colspec colname="descr2">
+      <spanspec spanname="description" namest="descr" nameend="descr2"
+       align="left">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry>Type</entry>
+	<entry>Value</entry>
+	<entry spanname="description">Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>2</entry>
+	<entry>uint16_t</entry>
+	<entry></entry>
+	<entry spanname="description">num-features</entry>
+       </row>
+       <row>
+	<entry>num-features</entry>
+	<entry>uint8_t[]</entry>
+	<entry></entry>
+	<entry spanname="description">feature-list</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+
+    <para>
+     Features that can appear in the feature-list are:
+    </para>
+
+    <table frame="all"><title>Features</title>
+     <tgroup cols="3" align="left" colsep="1" rowsep="1">
+      <colspec colname="feature">
+      <colspec colname="descr">
+      <colspec colname="descr2">
+      <spanspec spanname="description" namest="descr" nameend="descr2"
+       align="left">
+      <thead>
+       <row>
+	<entry>Feature</entry>
+	<entry spanname="description">Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>0</entry>
+	<entry spanname="description"><literal>Key</literal> message</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry spanname="description"><literal>Pointer</literal> message</entry>
+       </row>
+       <row>
+	<entry>2</entry>
+	<entry spanname="description">Incremental updates</entry>
+       </row>
+       <row>
+	<entry>3</entry>
+	<entry spanname="description">Incremental rectangle updates</entry>
+       </row>
+       <row>
+	<entry>4</entry>
+	<entry spanname="description">Incremental write updates</entry>
+       </row>
+       <row>
+	<entry>5</entry>
+	<entry spanname="description">Console cropping</entry>
+       </row>
+       <row>
+	<entry>6</entry>
+	<entry spanname="description">Graphical console switch
+	reporting</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </section>
+
+   <section id="clientinit">
+    <title>
+     <literal>ClientInitialisation</literal>
+    </title>
+
+    <para>
+     The <literal>ClientInitialisation</literal> is a response to the
+     <literal>ServerInitialisation</literal> message.
+    </para>
+
+    <table frame="all"><title><literal>ClientInitialisation</literal></title>
+     <tgroup cols="5" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <colspec colname="descr2">
+      <spanspec spanname="description" namest="descr" nameend="descr2"
+       align="left">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry>Type</entry>
+	<entry>Value</entry>
+	<entry spanname="description">Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>4</entry>
+	<entry>uint32_t</entry>
+	<entry></entry>
+	<entry spanname="description">Minimum incremental update period (ms)</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry spanname="description">Rows</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry spanname="description">Columns</entry>
+       </row>
+       <row>
+	<entry>2</entry>
+	<entry>uint16_t</entry>
+	<entry></entry>
+	<entry spanname="description">num-features</entry>
+       </row>
+       <row>
+	<entry>num-features</entry>
+	<entry>uint8_t[]</entry>
+	<entry></entry>
+	<entry spanname="description">features-requested</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+
+    <para>
+     The client specifies the minimum amount of time between
+     incremental updates in milliseconds.
+    </para>
+
+    <para>
+     It also specifies the number of rows and columns that it has.
+     This information is only needed if the console cropping feature
+     is used.
+    </para>
+
+    <para>
+     The features-requested array refers to the features advertised in
+     the <literal>ServerInitialisation</literal> message; if
+     num-features exceeds the number of features advertised, the
+     excess are ignored.
+    </para>
+
+    <para>
+     In general, a zero value for a feature request means that the
+     feature must not be used; a value of 1 means that it must be
+     used, and anything else is a <quote>don't care</quote>.
+    </para>
+   </section>
+  </section>
+
+  <section id="client">
+   <title>
+    Client-originated messages
+   </title>
+
+   <section id="update">
+    <title>
+     <literal>FullUpdateRequest</literal>
+    </title>
+
+    <para>
+     In order to request a full console update, the client uses this
+     message.  Incremental updates will not be sent by the server
+     until it receives and responds to this message.
+    </para>
+
+    <table frame="all"><title><literal>FullUpdateRequest</literal></title>
+     <tgroup cols="4" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry>Type</entry>
+	<entry>Value</entry>
+	<entry>Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry>0</entry>
+	<entry>message-type</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </section>
+
+   <section id="key">
+    <title>
+     <literal>Key</literal>
+    </title>
+
+    <para>
+     If the <literal>Key</literal> feature is supported, the client
+     can send a key to the RVC server.
+    </para>
+
+    <table frame="all"><title><literal>Key</literal></title>
+     <tgroup cols="4" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry>Type</entry>
+	<entry>Value</entry>
+	<entry>Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry>1</entry>
+	<entry>message-type</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>key</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </section>
+
+   <section id="pointer">
+    <title>
+     <literal>Pointer</literal>
+    </title>
+
+    <para>
+     If the <literal>Pointer</literal> feature is supported, the
+     client can send a pointer event to the RVC server.
+    </para>
+
+    <table frame="all"><title><literal>Pointer</literal></title>
+     <tgroup cols="4" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry>Type</entry>
+	<entry>Value</entry>
+	<entry>Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry>2</entry>
+	<entry>message-type</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>x position</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>y position</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>button-mask</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+
+    <para>
+     The x and y positions are zero-based, from the top left hand
+     corner.  The current state of buttons 1 to 8 are represented by
+     bits 0 to 7 of button-mask respectively, 0 mean up, 1 meaning
+     down.
+    </para>
+   </section>
+  </section>
+
+  <section id="server">
+   <title>
+    Server-originated messages
+   </title>
+
+   <section id="fullupdate">
+    <title>
+     <literal>FullUpdate</literal>
+    </title>
+
+    <para>
+     A full update is only sent in response to a
+     <literal>FullUpdateRequest</literal> message.
+    </para>
+
+    <table frame="all"><title><literal>FullUpdate</literal></title>
+     <tgroup cols="4" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry>Type</entry>
+	<entry>Value</entry>
+	<entry>Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry>0</entry>
+	<entry>message-type</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>rows</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>columns</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>x cursor position</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>y cursor position</entry>
+       </row>
+       <row>
+	<entry>2*rows*columns</entry>
+	<entry>uint8_t[]</entry>
+	<entry></entry>
+	<entry>contents</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+
+    <para>
+     The contents are sent in rows, with the first byte of a
+     (row,column) entry being the character at that position, and the
+     second being the attributes.  The attribute byte takes the form
+     of VGA text mode character attributes.
+    </para>
+   </section>
+
+   <section id="incr">
+    <title>
+     <literal>IncrementalUpdate</literal>
+    </title>
+
+    <para>
+     If the incremental update feature is in use, and the server has
+     sent a <literal>FullUpdate</literal>, an
+     <literal>IncrementalUpdate</literal> may be sent.
+    </para>
+
+    <table frame="all"><title><literal>IncrementalUpdate</literal></title>
+     <tgroup cols="4" align="left" colsep="1" rowsep="0">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <thead>
+       <row>
+	<entry rowsep="1">No. of bytes</entry>
+	<entry rowsep="1">Type</entry>
+	<entry rowsep="1">Value</entry>
+	<entry rowsep="1">Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry rowsep="1">1</entry>
+	<entry rowsep="1">uint8_t</entry>
+	<entry rowsep="1">1</entry>
+	<entry rowsep="1">message-type</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>update-type:</entry>
+       </row>
+       <row>
+	<entry></entry>
+	<entry></entry>
+	<entry>0</entry>
+	<entry>write</entry>
+       </row>
+       <row>
+	<entry></entry>
+	<entry></entry>
+	<entry>1</entry>
+	<entry>scroll</entry>
+       </row>
+       <row>
+	<entry></entry>
+	<entry></entry>
+	<entry>2</entry>
+	<entry>rectangle</entry>
+       </row>
+       <row>
+	<entry>2*rows*columns</entry>
+	<entry>uint8_t[]</entry>
+	<entry></entry>
+	<entry>contents</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+
+    <para>
+     A client that requests the incremental updates feature must
+     support rectangle type updates.  Other types of update will only
+     be sent if the corresponding feature is in use.
+    </para>
+
+    <para>
+     The header is followed by type-specific data.
+    </para>
+
+    <itemizedlist>
+     <listitem>
+      <para>
+       For <literal>rectangle</literal> updates the header is followed
+       by:
+      </para>
+
+      <table frame="all"><title><literal>rectangle</literal></title>
+       <tgroup cols="4" align="left" colsep="1" rowsep="1">
+	<colspec colname="num">
+	<colspec colname="type">
+	<colspec colname="value">
+	<colspec colname="descr">
+	<thead>
+	 <row>
+	  <entry>No. of bytes</entry>
+	  <entry>Type</entry>
+	  <entry>Value</entry>
+	  <entry>Description</entry>
+	 </row>
+	</thead>
+	<tbody>
+	 <row>
+	  <entry>1</entry>
+	  <entry>uint8_t</entry>
+	  <entry></entry>
+	  <entry>x position</entry>
+	 </row>
+	 <row>
+	  <entry>1</entry>
+	  <entry>uint8_t</entry>
+	  <entry></entry>
+	  <entry>y position</entry>
+	 </row>
+	 <row>
+	  <entry>1</entry>
+	  <entry>uint8_t</entry>
+	  <entry></entry>
+	  <entry>columns</entry>
+	 </row>
+	 <row>
+	  <entry>1</entry>
+	  <entry>uint8_t</entry>
+	  <entry></entry>
+	  <entry>rows</entry>
+	 </row>
+	 <row>
+	  <entry>2*rows*columns</entry>
+	  <entry>uint8_t[]</entry>
+	  <entry></entry>
+	  <entry>contents</entry>
+	 </row>
+	</tbody>
+       </tgroup>
+      </table>
+     </listitem>
+    </itemizedlist>
+   </section>
+
+   <section id="switch">
+    <title>
+     <literal>Switch</literal>
+    </title>
+
+    <para>
+     If the graphical console switch reporting feature is in use, this
+     message may be sent.
+    </para>
+
+    <table frame="all"><title><literal>Switch</literal></title>
+     <tgroup cols="4" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry>Type</entry>
+	<entry>Value</entry>
+	<entry>Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry>2</entry>
+	<entry>message-type</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>virtual console number</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </section>
+  </section>
+ </section>
+</article>
+
+<!-- Local Variables: -->
+<!-- sgml-indent-step: 1 -->
+<!-- sgml-indent-data: 1 -->
+<!-- End: -->

@@ -27,7 +27,7 @@
 #include <sys/kd.h>
 #include <sys/time.h>
 
-#define VERSION "0.0.1"
+#define VERSION "0.1.0"
 
 static int server (void)
 {
