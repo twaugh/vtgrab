@@ -4,7 +4,7 @@
 ]>
 
 <article id=index>
- <title>The RVC Protocol (draft!)</title>
+ <title>The RVC Protocol (draft 4!)</title>
 
  <artheader>
   <author>
@@ -33,7 +33,7 @@
   <para>
    Throughout this document, a <firstterm>virtual console</firstterm>
    refers to the active console of a machine; I acknowledge that for
-   some configuration that doesn't mean anything.  On Linux machines
+   some configurations that doesn't mean anything.  On Linux machines
    with virtual consoles configured, there are effectively several
    consoles, all multiplexed through the same display adapter.  The
    operator can switch between them at will, and some may be
@@ -45,8 +45,8 @@
    remote access to a computer's active virtual text console, and is
    based on <ulink
    url="http://www.uk.research.att.com/vnc/protocol.html">RFB</ulink>.
-   It allows a client to watch changes to the text console on which an
-   RVC server is running.
+   It allows a client to watch and control changes to the text console
+   of a machine on which an RVC server is running.
   </para>
 
   <para>
@@ -105,7 +105,7 @@
   </para>
 
   <para>
-   This allows the console input to come from the RVT client instead
+   This allows the console input to come from the RVC client instead
    of (or as well as) an operator situated at the console.  The model
    is of raw terminal input: characters are read from the console at
    the client end in raw mode, and written in raw mode at the server
@@ -113,7 +113,7 @@
   </para>
 
   <para>
-   This results in some differences between using an RVT client and
+   This results in some differences between using an RVC client and
    standing in front of the console, but it probably a lot easier to
    implement on a lot of platforms.
   </para>
@@ -126,8 +126,8 @@
 
   <para>
    The console representation is heavily biased towards the format of
-   <filename>/dev/vcsa<replaceable>n</replaceable></filename>.  The
-   console is just a rectangular array of characters (one byte each),
+   Linux's <filename>/dev/vcsa<replaceable>n</replaceable></filename>.
+   The console is just a rectangular array of characters (one byte each),
    each of which has an associated attribute byte.  In addition there
    is a cursor which may be placed over any of the characters.
   </para>
@@ -135,7 +135,7 @@
 
  <section id="protocol">
   <title>
-   RVT Protocol
+   RVC Protocol
   </title>
 
   <para>
@@ -144,7 +144,7 @@
   </para>
 
   <para>
-   The initial handshaknig for RVC consists of
+   The initial handshaking for RVC consists of
    <literal>ProtocolVersion</literal>,
    <literal>Authentication</literal>,
    <literal>ServerInitialisation</literal> and
@@ -154,10 +154,14 @@
   </para>
 
   <para>
-   The of the messages begin with a <literal>message-type</literal>
-   byte followed by message-specific data.  However, the message
-   formats and their message types differ significanly from those in
-   the RFB protocol.
+   The messages begin with a <literal>message-type</literal> byte
+   followed by message-specific data.  However, the message formats
+   and their message types differ significantly from those in the RFB
+   protocol.
+  </para>
+
+  <para>
+   The messages are in network byte order.
   </para>
 
   <section id="handshake">
@@ -184,7 +188,7 @@
     </para>
 
     <para>
-     Version of the protocol that differ in major number are probably
+     Versions of the protocol that differ in major number are probably
      not compatible with one another.
     </para>
 
@@ -229,7 +233,7 @@
 
     <para>
      The <literal>Authentication</literal> message is just the same as
-     RFB.
+     in RFB.
     </para>
 
     <table frame="all"><title><literal>Authentication</literal></title>
@@ -333,7 +337,7 @@
      <listitem>
       <para>
        <emphasis>no authentication</emphasis>---no authentication is
-       need and the protocol continues to
+       needed and the protocol continues to
        <literal>ServerInitialisation</literal>.
       </para>
      </listitem>
@@ -378,8 +382,8 @@
       </thead>
       <tbody>
        <row>
-	<entry>2</entry>
-	<entry>uint16_t</entry>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
 	<entry></entry>
 	<entry spanname="description">num-features</entry>
        </row>
@@ -420,12 +424,12 @@
 	<entry spanname="description"><literal>Pointer</literal> message</entry>
        </row>
        <row>
-	<entry>2</entry>
-	<entry spanname="description">Incremental updates</entry>
+        <entry>2</entry>
+        <entry spanname="description">Incremental rectangle updates</entry>
        </row>
        <row>
 	<entry>3</entry>
-	<entry spanname="description">Incremental rectangle updates</entry>
+	<entry spanname="description">Incremental scroll updates</entry>
        </row>
        <row>
 	<entry>4</entry>
@@ -437,8 +441,27 @@
        </row>
        <row>
 	<entry>6</entry>
-	<entry spanname="description">Graphical console switch
-	reporting</entry>
+	<entry spanname="description">Console switch reporting</entry>
+       </row>
+       <row>
+	<entry>7</entry>
+	<entry spanname="description">Console display locking</entry>
+       </row>
+       <row>
+	<entry>8</entry>
+	<entry spanname="description">Console input locking</entry>
+       </row>
+       <row>
+	<entry>9</entry>
+	<entry spanname="description">Shareable session</entry>
+       </row>
+       <row>
+	<entry>10</entry>
+	<entry spanname="description">VNC server integration</entry>
+       </row>
+       <row>
+        <entry>11</entry>
+        <entry spanname="description">Console switching</entry>
        </row>
       </tbody>
      </tgroup>
@@ -492,8 +515,14 @@
 	<entry spanname="description">Columns</entry>
        </row>
        <row>
-	<entry>2</entry>
-	<entry>uint16_t</entry>
+        <entry>1</entry>
+        <entry></entry>
+        <entry>0</entry>
+        <entry spanname="description">Padding byte</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
 	<entry></entry>
 	<entry spanname="description">num-features</entry>
        </row>
@@ -509,7 +538,7 @@
 
     <para>
      The client specifies the minimum amount of time between
-     incremental updates in milliseconds.
+     unsolicited incremental updates in milliseconds.
     </para>
 
     <para>
@@ -526,9 +555,8 @@
     </para>
 
     <para>
-     In general, a zero value for a feature request means that the
-     feature must not be used; a value of 1 means that it must be
-     used, and anything else is a <quote>don't care</quote>.
+     A zero value for a feature request means that the feature must
+     not be used; a value of 1 means that it may be used.
     </para>
    </section>
   </section>
@@ -545,8 +573,9 @@
 
     <para>
      In order to request a full console update, the client uses this
-     message.  Incremental updates will not be sent by the server
-     until it receives and responds to this message.
+     message.  Incremental updates not covering the entire console
+     area will not be sent by the server until it receives and
+     responds to this message.
     </para>
 
     <table frame="all"><title><literal>FullUpdateRequest</literal></title>
@@ -581,7 +610,7 @@
     </title>
 
     <para>
-     If the <literal>Key</literal> feature is supported, the client
+     If the <literal>Key</literal> feature is in use, the client
      can send a key to the RVC server.
     </para>
 
@@ -623,7 +652,7 @@
     </title>
 
     <para>
-     If the <literal>Pointer</literal> feature is supported, the
+     If the <literal>Pointer</literal> feature is in use, the
      client can send a pointer event to the RVC server.
     </para>
 
@@ -673,28 +702,25 @@
     <para>
      The x and y positions are zero-based, from the top left hand
      corner.  The current state of buttons 1 to 8 are represented by
-     bits 0 to 7 of button-mask respectively, 0 mean up, 1 meaning
+     bits 0 to 7 of button-mask respectively, 0 meaning up, 1 meaning
      down.
     </para>
    </section>
-  </section>
 
-  <section id="server">
-   <title>
-    Server-originated messages
-   </title>
-
-   <section id="fullupdate">
+   <section id="switchrequest">
     <title>
-     <literal>FullUpdate</literal>
+     <literal>SwitchRequest</literal>
     </title>
 
     <para>
-     A full update is only sent in response to a
-     <literal>FullUpdateRequest</literal> message.
+     A <literal>SwitchRequest</literal> can be used to try to change
+     the active console.  If successful, a <literal>Switch</literal>
+     message will be generated (if allowed).  Note that if the active
+     console is under programmatic control, the switch request may
+     silently fail.
     </para>
 
-    <table frame="all"><title><literal>FullUpdate</literal></title>
+    <table frame="all"><title><literal>SwitchRequest</literal></title>
      <tgroup cols="4" align="left" colsep="1" rowsep="1">
       <colspec colname="num">
       <colspec colname="type">
@@ -712,50 +738,25 @@
        <row>
 	<entry>1</entry>
 	<entry>uint8_t</entry>
-	<entry>0</entry>
+	<entry>3</entry>
 	<entry>message-type</entry>
        </row>
        <row>
 	<entry>1</entry>
 	<entry>uint8_t</entry>
 	<entry></entry>
-	<entry>rows</entry>
-       </row>
-       <row>
-	<entry>1</entry>
-	<entry>uint8_t</entry>
-	<entry></entry>
-	<entry>columns</entry>
-       </row>
-       <row>
-	<entry>1</entry>
-	<entry>uint8_t</entry>
-	<entry></entry>
-	<entry>x cursor position</entry>
-       </row>
-       <row>
-	<entry>1</entry>
-	<entry>uint8_t</entry>
-	<entry></entry>
-	<entry>y cursor position</entry>
-       </row>
-       <row>
-	<entry>2*rows*columns</entry>
-	<entry>uint8_t[]</entry>
-	<entry></entry>
-	<entry>contents</entry>
+	<entry>virtual console number</entry>
        </row>
       </tbody>
      </tgroup>
     </table>
-
-    <para>
-     The contents are sent in rows, with the first byte of a
-     (row,column) entry being the character at that position, and the
-     second being the attributes.  The attribute byte takes the form
-     of VGA text mode character attributes.
-    </para>
    </section>
+  </section>
+
+  <section id="server">
+   <title>
+    Server-originated messages
+   </title>
 
    <section id="incr">
     <title>
@@ -763,9 +764,9 @@
     </title>
 
     <para>
-     If the incremental update feature is in use, and the server has
-     sent a <literal>FullUpdate</literal>, an
-     <literal>IncrementalUpdate</literal> may be sent.
+     If the incremental update feature is not in use, any
+     <literal>IncrementalUpdate</literal> messages must cover the
+     entire console area.
     </para>
 
     <table frame="all"><title><literal>IncrementalUpdate</literal></title>
@@ -799,22 +800,28 @@
 	<entry></entry>
 	<entry></entry>
 	<entry>0</entry>
-	<entry>write</entry>
+	<entry>rectangle</entry>
        </row>
        <row>
 	<entry></entry>
 	<entry></entry>
 	<entry>1</entry>
-	<entry>scroll</entry>
+	<entry>write</entry>
        </row>
        <row>
 	<entry></entry>
 	<entry></entry>
 	<entry>2</entry>
-	<entry>rectangle</entry>
+	<entry>scroll</entry>
        </row>
        <row>
-	<entry>2*rows*columns</entry>
+	<entry>2</entry>
+	<entry>uint16_t</entry>
+	<entry>n</entry>
+	<entry>content-length</entry>
+       </row>
+       <row>
+	<entry>n</entry>
 	<entry>uint8_t[]</entry>
 	<entry></entry>
 	<entry>contents</entry>
@@ -824,9 +831,8 @@
     </table>
 
     <para>
-     A client that requests the incremental updates feature must
-     support rectangle type updates.  Other types of update will only
-     be sent if the corresponding feature is in use.
+     A client must support rectangle type updates.  Other types of
+     update will only be sent if the corresponding feature is in use.
     </para>
 
     <para>
@@ -859,13 +865,19 @@
 	  <entry>1</entry>
 	  <entry>uint8_t</entry>
 	  <entry></entry>
-	  <entry>x position</entry>
+	  <entry>x offset</entry>
 	 </row>
 	 <row>
 	  <entry>1</entry>
 	  <entry>uint8_t</entry>
 	  <entry></entry>
-	  <entry>y position</entry>
+	  <entry>y offset</entry>
+	 </row>
+	 <row>
+	  <entry>1</entry>
+	  <entry>uint8_t</entry>
+	  <entry></entry>
+	  <entry>rows</entry>
 	 </row>
 	 <row>
 	  <entry>1</entry>
@@ -877,7 +889,13 @@
 	  <entry>1</entry>
 	  <entry>uint8_t</entry>
 	  <entry></entry>
-	  <entry>rows</entry>
+	  <entry>x position</entry>
+	 </row>
+	 <row>
+	  <entry>1</entry>
+	  <entry>uint8_t</entry>
+	  <entry></entry>
+	  <entry>y position</entry>
 	 </row>
 	 <row>
 	  <entry>2*rows*columns</entry>
@@ -888,6 +906,13 @@
 	</tbody>
        </tgroup>
       </table>
+
+      <para>
+       The contents are sent in rows, with the first byte of a
+       (row,column) entry being the character at that position, and the
+       second being the attributes.  The attribute byte takes the form
+       of VGA text mode character attributes.
+      </para>
      </listitem>
     </itemizedlist>
    </section>
@@ -898,8 +923,8 @@
     </title>
 
     <para>
-     If the graphical console switch reporting feature is in use, this
-     message may be sent.
+     If the console switch reporting feature is in use, this message
+     may be sent.
     </para>
 
     <table frame="all"><title><literal>Switch</literal></title>
@@ -929,9 +954,26 @@
 	<entry></entry>
 	<entry>virtual console number</entry>
        </row>
+       <row>
+	<entry>2</entry>
+	<entry>uint16_t</entry>
+	<entry></entry>
+	<entry>port number</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry></entry>
+	<entry>mode (0 for text)</entry>
+       </row>
       </tbody>
      </tgroup>
     </table>
+
+    <para>
+     The port number is one on which an RFB server is accepting
+     connections for that display, or zero if there is no such server.
+    </para>
    </section>
   </section>
  </section>
