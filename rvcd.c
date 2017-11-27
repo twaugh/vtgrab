@@ -34,6 +34,7 @@
 #include <sys/kd.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <termios.h>
 #include <unistd.h>
 
 #include <config.h>
@@ -41,7 +42,7 @@
 #include "xfree86.h"
 
 /* set to zero for production */
-#define DEBUG 0
+#define DEBUG 1
 
 static uint8_t features[] = {
 	Feature_Crop,
@@ -413,6 +414,9 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 	/* Minimum 50ms between updates */
 	if (delay < 50)
 		delay = 50;
+	/* Cap delay at a sensible amount */
+	if (delay > 100000)
+		delay = 100000;
 
 	if (!contents || !last) {
 		printf ("Memory squeeze\n");
@@ -521,6 +525,24 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 
 out:
 	close (console);
+
+	/**
+	 * Drain the input
+	 **/
+	sleep (1);
+	if (isatty (fd))
+		tcflush (fd, TCIOFLUSH);
+	else {
+		int flags;
+		fcntl (fd, F_GETFL, &flags);
+		flags |= O_NONBLOCK;
+		fcntl (fd, F_SETFL, &flags);
+		while (read (fd, contents, MAX_CONTENTS) > 0)
+			;
+		flags &= ~O_NONBLOCK;
+		fcntl (fd, F_SETFL, &flags);
+	}
+
 	return 0;
 }
 
@@ -699,6 +721,15 @@ int main (int argc, char **argv)
 			close (s);
 			exit (1);
 		}
+	} else if (isatty (fd)) {
+		/* Need to set raw mode */
+		struct termios tios;
+		tcgetattr (fd, &tios);
+		cfmakeraw (&tios);
+		cfsetospeed (&tios, B57600);
+		cfsetispeed (&tios, B57600);
+		tcsetattr (fd, TCSANOW, &tios);
+		tcflush (fd, TCIOFLUSH);
 	}
 
 	xfree86_init ();

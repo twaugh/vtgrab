@@ -21,8 +21,10 @@
  
 #include <assert.h>
 #include <config.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <inttypes.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -33,6 +35,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <termios.h>
 #include <unistd.h>
 
 // On some systems, signal.h and curses.h don't get on if _GNU_SOURCE
@@ -61,6 +64,8 @@ static PANEL *status_pnl = NULL;
 static int status_pnl_expired;
 static PANEL *display = NULL;
 static int display_pminrow, display_pmincol;
+static int escape_key = '\001'; // ^A
+static int escape_escape_key = '\001'; // ^A
 
 static int log (char *fmt __attribute__ ((unused)), ...)
 {
@@ -204,10 +209,22 @@ static int main_menu (int fd, int key)
 		box (wnd, ACS_VLINE, ACS_HLINE);
 		y = 2;
 		wmove (wnd, y++, 3);
-		wprintw (wnd, "Send Control-");
-		wattron (wnd, A_UNDERLINE);
-		wprintw (wnd, "A");
-		wattroff (wnd, A_UNDERLINE);
+		wprintw (wnd, "Send ");
+		if (iscntrl (escape_key))
+			wprintw (wnd, "Control-");
+		if ((escape_key & 0x1f) == (escape_escape_key & 0x1f)) {
+			wattron (wnd, A_UNDERLINE);
+			wprintw (wnd, "%c", 'A' - 1 + (escape_key & 0x1f));
+			wattroff (wnd, A_UNDERLINE);
+		} else {
+			wprintw (wnd, "%c (", 'A' - 1 + (escape_key & 0x1f));
+			wattron (wnd, A_UNDERLINE);
+			wprintw (wnd, "%s%c",
+				 iscntrl (escape_escape_key) ?  "^" : "",
+				 'A' - 1 + (escape_escape_key & 0x1f));
+			wattroff (wnd, A_UNDERLINE);
+			wprintw (wnd, ")");
+		}
 		wmove (wnd, y++, 3);
 		wattron (wnd, A_UNDERLINE);
 		wprintw (wnd, "E");
@@ -261,16 +278,11 @@ static int main_menu (int fd, int key)
 		wprintw (wnd, ">");
 		wmove (wnd, 2 + selection, width - 2);
 		break;
-	case '\001':
-	case '\033':
-	case 'a':
-	case 'e':
-	case 'k':
-	case 'v':
-	case 'x':
+	default: // shortcuts
 		switch (key) {
-		case '\001':
-		case 'a':
+		default:
+			if (key != escape_escape_key)
+				goto out;
 			selection = 0;
 			break;
 		case '\033':
@@ -297,7 +309,7 @@ static int main_menu (int fd, int key)
 		menu = NULL;
 		switch (selection) {
 		case 0: // Send control-A
-			send_key (fd, '\001');
+			send_key (fd, escape_key);
 			break;
 		case 1: // Exit main menu
 			break;
@@ -316,6 +328,7 @@ static int main_menu (int fd, int key)
 		break;
 	}
 
+out:
 	update_panels ();
 	doupdate ();
 	return 0;
@@ -404,6 +417,16 @@ static int handle_update (int fd)
 
 	if (update_type != UpdateType_Rectangle)
 		return 1;
+
+	if (!display) {
+		if (contents[0] || contents[1])
+			// Need full update
+			return 1;
+
+		wnd = newpad (contents[2], contents[3]);
+		if (!wnd)
+			return 1;
+	}
 
 	if (!contents[0] && !contents[1]) {
 		if (display) {
@@ -508,6 +531,9 @@ static int handle_switch (int fd)
 	if (read_exact (fd, switchmsg, sizeof (switchmsg)))
 		return 1;
 
+	if (!display)
+		return 0;
+
 	memcpy (&port, &switchmsg[1], 2);
 	port = ntohs (port);
 	if (first) {
@@ -582,7 +608,7 @@ static int handle_input (int fd)
 		char key;
 		if (read_exact (STDIN_FILENO, &key, 1))
 			return 1;
-		if (key == '\001') {
+		if (key == escape_key) {
 			menu = main_menu;
 			(*menu) (fd, key);
 		} else {
@@ -706,6 +732,12 @@ void setup_colours (void)
 	do_colourmap_setup (7, COLOR_CYAN);
 }
 
+static void terminate (int fd)
+{
+	uint8_t trm = Msg_Terminate;
+	write (fd, &trm, sizeof (trm));
+}
+
 static int client (int fd)
 {
 	const size_t protverlen = 12;
@@ -735,6 +767,12 @@ static int client (int fd)
 	sint.sa_flags = 0;
 	sigaction (SIGINT, &sint, NULL);
 
+	/**
+	 * Terminate any preexisting connection
+	 **/
+	if (isatty (fd))
+		terminate (fd);
+	
 	/**
 	 * Receive ProtocolVersion
 	 **/
@@ -886,27 +924,95 @@ static int connect_to (const char *name)
 	return s;
 }
 
-int main (int argc, char *argv[])
+static int interpret_escape (const char **esc)
 {
-	int fd;
+	int key = ERR;
+	const char *p = *esc;
+	if (*p == '^') {
+		key = *++p & 0x1f;
+		p++;
+	} else
+		key = *p++;
+	*esc = p;
+	return key;
+}
 
-	if (argc < 2) {
+static int interpret_escapes (const char *esc)
+{
+	int escape = interpret_escape (&esc);
+	int escape_escape = interpret_escape (&esc);
+
+	if (escape == ERR ||
+	    escape_escape == ERR) {
 		syntax ();
 		exit (1);
 	}
 
-	if (!strcmp (argv[1], "--version")) {
-		printf ("ncurses-based RVC (vtgrab %s)\n", VERSION);
-		exit (0);
+	escape_key = escape;
+	escape_escape_key = escape_escape;
+	return 0;
+}
+
+int main (int argc, char *argv[])
+{
+	int fd;
+
+	/* Options */
+	for (;;) {
+		static struct option long_options[] = {
+			{"control", 0, 0, 'c'},
+			{"escape", 1, 0, 'e'},
+			{"help", 0, 0, 'h'},
+			{"version", 0, 0, 'v'},
+			{0, 0, 0, 0}
+		};
+		int c = getopt_long (argc, argv, "ce:",
+				     long_options, NULL);
+		if (c == -1)
+			break;
+
+		switch (c) {
+		case 'h':
+			syntax ();
+			exit (0);
+
+		case 'v':
+			printf ("ncurses-based RVC (vtgrab %s)\n", VERSION);
+			exit (0);
+
+		case 'c':
+			keyboard_control = 1;
+			break;
+
+		case 'e':
+			interpret_escapes (optarg);
+			break;
+		}
 	}
 
-	if (!strcmp (argv[1], "--help")) {
+	if (argc - optind != 1) {
 		syntax ();
-		exit (0);
+		exit (1);
 	}
 
-	if ((fd = open (argv[1], O_RDWR)) == -1)
-		fd = connect_to (argv[1]);
+	if ((fd = open (argv[optind], O_RDWR)) == -1)
+		fd = connect_to (argv[optind]);
+	else {
+		/* Need to set raw mode */
+		struct termios tios;
+		tcgetattr (fd, &tios);
+		cfmakeraw (&tios);
+		cfsetospeed (&tios, B57600);
+		cfsetispeed (&tios, B57600);
+		tcsetattr (fd, TCSANOW, &tios);
+		tcflush (fd, TCIOFLUSH);
+	}
+
+	if (isatty (fd)) {
+		int safe;
+		for (safe = 100; safe > 0; safe--)
+			terminate (fd);
+	}
 
 	return client (fd);
 }

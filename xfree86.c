@@ -128,7 +128,7 @@ static int grab_cookie (struct consolemap *cons)
 		close (fildes[0]);
 		close (fildes[1]);
 		setenv ("PATH", path, 1);
-		execlp ("xauth", "xauth", "merge", "-", NULL);
+		execlp ("xauth", "xauth", "nmerge", "-", NULL);
 		exit (1);
 	}
 	close (fildes[0]);
@@ -153,7 +153,7 @@ static int grab_cookie (struct consolemap *cons)
 		close (fildes[1]);
 		setenv ("PATH", path, 1);
 		execlp ("xauth", "xauth", "-f", cons->authority_file,
-			"extract", "-", display, NULL);
+			"nlist", NULL);
 		exit (1);
 	}
 	close (null);
@@ -161,13 +161,13 @@ static int grab_cookie (struct consolemap *cons)
 	waitpid (extract, &status, 0);
 	if (WEXITSTATUS (status)) {
 		wait (NULL);
-		fprintf (stderr, "Extract failed with %d\n",
+		fprintf (stderr, "nlist failed with %d\n",
 			 WEXITSTATUS (status));
 		return 1;
 	}
 	waitpid (merge, &status, 0);
 	if (WEXITSTATUS (status)) {
-		fprintf (stderr, "Merge failed with %d\n",
+		fprintf (stderr, "nmerge failed with %d\n",
 			 WEXITSTATUS (status));
 		return 1;
 	}

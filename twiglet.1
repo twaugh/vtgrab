@@ -1,0 +1,63 @@
+.\"		-*-Nroff-*-
+.\" Copyright 2000 Red Hat, Inc.
+.TH TWIGLET 1 "20 Sep 2000" "VTGRAB" "User's Manual"
+.SH NAME
+twiglet \- observe or control an RVC-enabled machine's console
+.SH SYNOPSIS
+.B twiglet
+[\fIOPTION\fR]... \fIhost-specification\fR
+.fi
+.SH DESCRIPTION
+twiglet is a program for controlling another machine's console.  It works
+using the RVC protocol, and an RVC server (such as rvcd(1)) must be
+running on the machine to be observed.
+
+Using twiglet, the a best effort attempt is made to duplicate the screen
+contents of the observed machine.  If the machine is displaying a
+virtual text console, the text on the console is rendered in the terminal
+in which twiglet runs.  If the machine is displaying an X session,
+and the RVC server supports VNC integration, twiglet will open a window
+that contains the current contents of the X display.
+
+It is also possible to control the observed machine in various ways.
+With keyboard control enabled (and with support from the RVC server),
+keys may be sent to the observed machine in text console mode almost
+as if they were typed from the keyboard.  Twiglet also supports
+switching virtual console on the observed machine.  Finally, if VNC
+integration is available, the X display can be manipulated almost as if
+the user were at the console.
+
+The intended use for twiglet is in training and teaching environments.
+The idea is that there are student machines and a control machine
+(which the trainer or teacher would be using), with a serial line
+attached to each student machine.  The trainer or teacher can then
+analyse the students' attempts to complete tasks, and help them
+out (showing them how to finish it) without needed to push them
+aside to get to the keyboard.
+
+This client is written using ncurses(3X).
+.SH OPTIONS
+.TP
+\fB\--help\fR
+display a help message and exit successfully
+.TP
+\fB\--version\fR
+display a version number and exit successfully
+.TP
+\fB\-c\fR, \fB\--control\fR
+control the remote machine rather than just observing it
+.TP
+\fB\-e\fR \fIxy\fR, \fB\--escape\fR \fIxy\fR
+set the escape character and the escape escape character (like screen(1))
+.PP
+The \fIhost-specification\fR takes one of the following forms:
+.TP
+\fIhost\fR:\fIport\fR
+to connect to an RVC server over TCP
+.TP
+\fItty\fR
+to communicate with an RVC server over a tty (for example a serial line)
+.SH BUGS
+I'm sure there are bugs, but I don't know what they are.
+.SH AUTHOR
+Tim Waugh <twaugh@redhat.com>

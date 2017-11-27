@@ -1,3 +1,21 @@
+2000-10-10  Tim Waugh  <twaugh@redhat.com>
+
+	* configure.in: Version 0.1.6.
+
+2000-10-05  Tim Waugh  <twaugh@redhat.com>
+
+	* nrvc.c (terminate): New function.  Do tty setup.
+	(client): Use it.
+	(main): Likewise.
+	* rvcd.c (server_loop): Cap delay at a sensible amount.  Do
+	tty setup and draining.
+
+2000-09-27  Tim Waugh  <twaugh@redhat.com>
+
+	* xfree86.c (grab_cookie): Use 'xauth -f authfile nlist | xauth
+	nmerge -' instead of 'xauth -f authfile extract - display | xauth
+	merge -'.  This should be more reliable.
+
 2000-09-17  Tim Waugh  <twaugh@redhat.com>
 
 	* configure.in: Version 0.1.5.

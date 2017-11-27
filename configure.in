@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(rvcd.c)
 AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE(vtgrab, 0.1.5)
+AM_INIT_AUTOMAKE(vtgrab, 0.1.6)
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -39,4 +39,4 @@ AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MEMCMP
 AC_CHECK_FUNCS(select strcspn strdup strstr strtoul)
 
-AC_OUTPUT(Makefile)
+AC_OUTPUT(Makefile vtgrab.spec)
