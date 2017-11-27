@@ -24,15 +24,16 @@
 #include <sys/ioctl.h>
 #include <sys/fcntl.h>
 #include <sys/vt.h>
+#include <sys/kd.h>
 #include <sys/time.h>
 
-#define VERSION "0.0.0"
+#define VERSION "0.0.1"
 
 static int server (void)
 {
 	const size_t MAX_CONTENTS = 100000;
 	struct vt_stat vtstat;
-	struct vt_mode mode;
+	long mode;
 	char fgcons[100];
 	struct timeval tv;
 	char *contents = malloc (MAX_CONTENTS);
@@ -43,7 +44,7 @@ static int server (void)
 	}
 	for (;;) {
 		ssize_t size;
-		int c = open ("/dev/console", O_RDONLY);
+		int c = open ("/dev/console", O_RDONLY | O_NOCTTY);
 		if (c == -1) {
 			perror ("/dev/console");
 			exit (1);
@@ -54,19 +55,19 @@ static int server (void)
 		}
 		close (c);
 		sprintf (fgcons, "/dev/tty%d", vtstat.v_active);
-		c = open (fgcons, O_RDONLY);
+		c = open (fgcons, O_RDONLY | O_NOCTTY);
 		if (c == -1) {
 			perror (fgcons);
 			exit (1);
 		}
-		if (ioctl (c, VT_GETMODE, &mode)) {
-			perror ("VT_GETMODE");
+		if (ioctl (c, KDGETMODE, &mode)) {
+			perror ("KDGETMODE");
 			exit (1);
 		}
 		close (c);
 		sprintf (fgcons, "/dev/vcsa%d", vtstat.v_active);
-		if (!mode.mode) {
-			c = open (fgcons, O_RDONLY);
+		if (mode == KD_TEXT) {
+			c = open (fgcons, O_RDONLY | O_NOCTTY);
 			if (c == -1) {
 				perror (fgcons);
 				exit (1);
@@ -76,12 +77,12 @@ static int server (void)
 		} else if (size) {
 			size = 0;
 			memset (last, 0, MAX_CONTENTS);
-			printf ("%d,0\n", mode.mode);
+			printf ("%ld,0\n", mode);
 			fflush (stdout);
 		}
 
 		if (memcmp (last, contents, size)) {
-			printf ("%d,%dz\n", mode.mode, size);
+			printf ("%ld,%dz\n", mode, size);
 
 			fwrite (contents, size, 1, stdout);
 			fflush (stdout);
@@ -100,7 +101,7 @@ static int client (void)
 {
 	struct vt_stat vtstat;
 	char fgcons[100];
-	int c = open ("/dev/console", O_RDONLY);
+	int c = open ("/dev/console", O_RDONLY | O_NOCTTY);
 	if (c == -1) {
 		perror ("/dev/console");
 		exit (1);
@@ -113,10 +114,10 @@ static int client (void)
 	sprintf (fgcons, "/dev/vcsa%d", vtstat.v_active);
 
 	for (;;) {
-		int mode;
+		long mode;
 		ssize_t len;
 		FILE *f;
-		scanf ("%d,%dz\n", &mode, &len);
+		scanf ("%ld,%dz\n", &mode, &len);
 		f = fopen (fgcons, "w+");
 		if (!f) {
 			perror (fgcons);

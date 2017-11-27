@@ -1,0 +1,13 @@
+2000-07-27  Tim Waugh  <twaugh@redhat.com>
+
+	(VERSION): Version 0.0.1 (stable).
+
+2000-07-27  Tim Waugh  <twaugh@redhat.com>
+
+	* vtgrab.c (server): Open with O_NOCTTY.
+	(client): Likewise.
+	(server): Use KDGETMODE instead of VT_GETMODE.
+	(server): mode is now a long.
+	(client): mode is now a long.
+
+
