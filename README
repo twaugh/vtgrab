@@ -1,16 +1,20 @@
 vtgrab is a program to copy the foreground terminal of one machine to
 another, in order to allow remote monitoring.
 
+This may not be the program you are looking for!  This is quite a
+specialist tool, and screen may well be more appropriate for most
+uses!
+
 In this package is:
 
 - an RVC server (rvcd)
 - a console client (rvc)
-- an ncurses-based client (nrvc)
+- an ncurses-based client (twiglet)
 
 You can use it like this:
 
 # ssh root@observed 'rvcd :6100 > /dev/null 2>&1 &'
-$ nrvc observed:6100
+$ twiglet observed:6100
 
 The server needs to run as root on the observed machine.  The console
 client also needs to run as root.

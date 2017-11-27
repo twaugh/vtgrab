@@ -327,7 +327,7 @@ static int client (int fd)
 	ci.cols = 80;
 	fread (&ci.rows, 1, 1, vcsa);
 	fread (&ci.cols, 1, 1, vcsa);
-	ci.pad = 0;
+	ci.pad1 = ci.pad2 = ci.pad3 = ci.pad4 = 0;
 	ci.num_features = num_features;
 	if (write_exact (fd, &ci, sizeof (ci)))
 		return log ("Problem sending ClientInitialisation\n");

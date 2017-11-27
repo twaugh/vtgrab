@@ -19,7 +19,7 @@
  * This is an RVC client, based on ncurses.
  */
  
-#include <signal.h>
+#include <assert.h>
 #include <config.h>
 #include <curses.h>
 #include <errno.h>
@@ -27,7 +27,7 @@
 #include <inttypes.h>
 #include <netdb.h>
 #include <netinet/in.h>
-#include <panel.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -37,22 +37,27 @@
 #include <unistd.h>
 
 #include "rvc.h"
+#include "simple_panel.h"
+
 #define DEBUG 0
 
 static uint8_t wishlist[] = {
-	Feature_Crop,
 	Feature_Key,
 	Feature_IncRectangle,
 	Feature_SwitchRequest,
 	Feature_Switch,
 };
 
+static int caught_break = 0;
+static int colourmap[8][8];
 static char *remote_host = NULL;
 static uint8_t in_use[256];
 static int keyboard_control = 0;
 static int (*menu) (int fd, int key) = NULL;
 static PANEL *status_pnl = NULL;
 static int status_pnl_expired;
+static PANEL *display = NULL;
+static int display_pminrow, display_pmincol;
 
 static int log (char *fmt __attribute__ ((unused)), ...)
 {
@@ -85,27 +90,23 @@ static int read_exact (int fd, void *buffer, size_t len)
 	return 0;
 }
 
-static int send_key (int fd, int key)
+static int send_key (int fd, char key)
 {
 	int xfd = dup (fd);
 	FILE *f = fdopen (xfd, "r+");
 	if (!f)
 		return 1;
 
-	// TODO: We'll need to use terminfo to figure out what to send
-
-	// Fix up awkward keys
-	switch (key) {
-	case KEY_BACKSPACE:
-	case 8:
-		key = 127;
-		break;
-	}
-
 	fputc (Msg_Key, f);
 	fputc (key, f);
 	fclose (f);
 	return 0;
+}
+
+static int request_full_update (int fd)
+{
+	uint8_t msg = Msg_FullUpdateRequest;
+	return write_exact (fd, &msg, 1);
 }
 
 static int send_switchrequest (int fd, int switchto)
@@ -118,7 +119,7 @@ static int send_switchrequest (int fd, int switchto)
 	fputc (Msg_SwitchRequest, f);
 	fputc (switchto, f);
 	fclose (f);
-	return 0;
+	return request_full_update (fd);
 }
 
 static int vt_menu (int fd, int key)
@@ -200,17 +201,34 @@ static int main_menu (int fd, int key)
 		box (wnd, ACS_VLINE, ACS_HLINE);
 		y = 2;
 		wmove (wnd, y++, 3);
-		wprintw (wnd, "Send Control-A");
+		wprintw (wnd, "Send Control-");
+		wattron (wnd, A_UNDERLINE);
+		wprintw (wnd, "A");
+		wattroff (wnd, A_UNDERLINE);
 		wmove (wnd, y++, 3);
-		wprintw (wnd, "Exit main menu");
+		wattron (wnd, A_UNDERLINE);
+		wprintw (wnd, "E");
+		wattroff (wnd, A_UNDERLINE);
+		wprintw (wnd, "xit main menu");
 		wmove (wnd, y, 3);
-		wprintw (wnd, "Keyboard control");
+		wattron (wnd, A_UNDERLINE);
+		wprintw (wnd, "K");
+		wattroff (wnd, A_UNDERLINE);
+		wprintw (wnd, "eyboard control");
 		wmove (wnd, y++, width - 5);
 		wprintw (wnd, "%s", keyboard_control ? " On" : "Off");
 		wmove (wnd, y++, 3);
-		wprintw (wnd, "Switch virtual terminal");
+		wprintw (wnd, "Switch ");
+		wattron (wnd, A_UNDERLINE);
+		wprintw (wnd, "v");
+		wattroff (wnd, A_UNDERLINE);
+		wprintw (wnd, "irtual terminal");
 		wmove (wnd, y++, 3);
-		wprintw (wnd, "Exit viewer");
+		wprintw (wnd, "E");
+		wattron (wnd, A_UNDERLINE);
+		wprintw (wnd, "x");
+		wattroff (wnd, A_UNDERLINE);
+		wprintw (wnd, "it viewer");
 		selection = 0;
 		wmove (wnd, 2 + selection, 2);
 		wprintw (wnd, ">");
@@ -242,14 +260,18 @@ static int main_menu (int fd, int key)
 		break;
 	case '\001':
 	case '\033':
+	case 'a':
+	case 'e':
 	case 'k':
 	case 'v':
 	case 'x':
 		switch (key) {
 		case '\001':
+		case 'a':
 			selection = 0;
 			break;
 		case '\033':
+		case 'e':
 			selection = 1;
 			break;
 		case 'k':
@@ -284,6 +306,8 @@ static int main_menu (int fd, int key)
 			(*menu) (fd, key);
 			break;
 		case 4: // Exit viewer
+			update_panels ();
+			doupdate ();
 			exit (0);
 		}
 		break;
@@ -294,10 +318,43 @@ static int main_menu (int fd, int key)
 	return 0;
 }
 
+static void update_display_panel (void)
+{
+	int slop = 5;
+	WINDOW *wnd = panel_window (display);
+	int curx, cury, maxx, maxy, pmaxx, pmaxy;
+	getyx (wnd, cury, curx);
+	getmaxyx (wnd, pmaxy, pmaxx);
+	getmaxyx (stdscr, maxy, maxx);
+	if (curx < display_pmincol) {
+		display_pmincol = curx - slop;
+		if (display_pmincol < 0)
+			display_pmincol = 0;
+	}
+	if (curx >= (display_pmincol + maxx)) {
+		display_pmincol = curx - maxx + slop;
+		if ((display_pmincol + maxx) > pmaxx)
+			display_pmincol = pmaxx - maxx;
+	}
+	if (cury < display_pminrow) {
+		display_pminrow = cury - slop;
+		if (display_pminrow < 0)
+			display_pminrow = 0;
+	}
+	if (cury >= (display_pminrow + maxy)) {
+		display_pminrow = cury - maxy + slop;
+		if ((display_pminrow  + maxy) > pmaxy)
+			display_pminrow = pmaxy - maxy;
+	}
+	panel_is_pad (display, display_pminrow, display_pmincol, 0, 0,
+		      maxy, maxx);
+}
+
 static int handle_update (int fd)
 {
 	static uint8_t *contents = NULL;
 	static uint16_t allocated = 0;
+	WINDOW *wnd;
 	uint8_t header[3];
 	uint8_t update_type;
 	uint16_t content_length;
@@ -327,30 +384,51 @@ static int handle_update (int fd)
 	if (update_type != UpdateType_Rectangle)
 		return 1;
 
-#if DEBUG
+	if (!display) {
+		if (contents[0] || contents[1])
+			// Need full update
+			return 1;
+
+		wnd = newpad (contents[2], contents[3]);
+		if (!wnd)
+			return 1;
+
+		display = new_panel (wnd);
+		if (!display)
+			return 1;
+
+		bottom_panel (display);
+		display_pmincol = 0;
+		display_pminrow = 0;
+	} else
+		wnd = panel_window (display);
+
+	// TODO: check that we aren't going to write over the end of the pad
+
 	for (y = 0; y < contents[2]; y++) {
 		uint8_t *p;
 		p = contents + 6;
 		p += y * 2 * contents[3];
-		for (x = 0; x < contents[3]; x++)
-			mvaddch (y + contents[1], x + contents[0],
-				 p[2 * x] | A_REVERSE);
+		for (x = 0; x < contents[3]; x++) {
+			uint8_t attrbyte = p[2 * x + 1];
+			int attr = 0;
+			int fg, bg;
+			if (attrbyte & 0x80)
+				attr |= A_BLINK;
+			if (attrbyte & 0x08)
+				attr |= A_BOLD;
+			fg = attrbyte & 7;
+			bg = (attrbyte >> 4) & 7;
+			attr |= COLOR_PAIR (colourmap[bg][fg]);
+			wattrset (wnd, attr);
+			mvwaddch (wnd, y + contents[1], x + contents[0],
+				  p[2 * x]);
+		}
 	}
 
-	update_panels ();
-	doupdate ();
-	usleep (500000);
-#endif
-
-	for (y = 0; y < contents[2]; y++) {
-		uint8_t *p;
-		p = contents + 6;
-		p += y * 2 * contents[3];
-		for (x = 0; x < contents[3]; x++)
-			mvaddch (y + contents[1], x + contents[0], p[2 * x]);
-	}
-
-	move (contents[5], contents[4]);
+	wattrset (wnd, A_NORMAL);
+	wmove (wnd, contents[5], contents[4]);
+	update_display_panel ();
 	update_panels ();
 	doupdate ();
 
@@ -363,13 +441,12 @@ static void sigalrm (int sig __attribute__ ((unused)))
 	status_pnl_expired = 1;
 }
 
-static int request_full_update (int fd)
+static void sigint (int sig __attribute__ ((unused)))
 {
-	uint8_t msg = Msg_FullUpdateRequest;
-	return write_exact (fd, &msg, 1);
+	caught_break++;
 }
 
-static int try_vncviewer (unsigned short port)
+static pid_t try_vncviewer (unsigned short port)
 {
 	char *param;
 	pid_t pid;
@@ -383,7 +460,7 @@ static int try_vncviewer (unsigned short port)
 	null = open ("/dev/null", O_RDWR);
 	pid = fork ();
 	if (pid == -1)
-		return 1;
+		return pid;
 	if (!pid) {
 		// Child.
 		close (0);
@@ -397,18 +474,18 @@ static int try_vncviewer (unsigned short port)
 	}
 	close (null);
 	free (param);
-	return 1;
+	return pid;
 }
 
 static int handle_switch (int fd)
 {
 	static int first = 1;
+	static pid_t vncviewer = -1;
 	WINDOW *wnd;
 	uint8_t switchmsg[4];
 	uint16_t port;
 	char status_bar[100];
 	int len;
-	int y, x;
 
 	if (read_exact (fd, switchmsg, sizeof (switchmsg)))
 		return 1;
@@ -430,31 +507,47 @@ static int handle_switch (int fd)
 		status_pnl = NULL;
 	}
 
-	getyx (stdscr, y, x);
 	wnd = newwin (1, len, 0, 0);
 	status_pnl = new_panel (wnd);
 	wattron (wnd, A_REVERSE);
 	mvwprintw (wnd, 0, 0, "%s", status_bar);
 	curs_set (0);
 
+	if (vncviewer != -1) {
+		switch (waitpid (vncviewer, NULL, WNOHANG)) {
+		case 0: // still running
+			kill (vncviewer, SIGTERM);
+			waitpid (vncviewer, NULL, 0);
+			vncviewer = -1;
+			break;
+		default: // exited
+		case -1: // wrong pid
+			vncviewer = -1;
+			break;
+		}
+	}
+
 	if (switchmsg[3]) {
-		erase ();
-		mvprintw (2, 2, "%s",
+		WINDOW *dwnd = panel_window (display);
+		werase (dwnd);
+		mvwprintw (dwnd, 2, 2, "%s",
 			  "It is not possible to display this terminal "
 			  "as text.");
 		if (port) {
-			mvprintw (3, 2, "Use vncviewer to view display :%d.",
-				  port - 5900);
-			try_vncviewer (port);
+			mvwprintw (dwnd, 3, 2,
+				   "Use vncviewer to view display :%d.",
+				   port - 5900);
+			vncviewer = try_vncviewer (port);
 		}
 
-		move (0, 0);
+		wmove (dwnd, 0, 0);
+		update_display_panel ();
 	}
 
 	update_panels ();
 	doupdate ();
 	status_pnl_expired = 0;
-	alarm (1);
+	alarm (2);
 
 	if (!switchmsg[3])
 		request_full_update (fd);
@@ -464,25 +557,29 @@ static int handle_switch (int fd)
 
 static int handle_input (int fd)
 {
-	int key = getch();
-	if (!menu) {
-		if (key == '\001')
+	if (menu) {
+		int key = getch();
+		(*menu) (fd, key);
+	} else {
+		char key;
+		if (read_exact (STDIN_FILENO, &key, 1))
+			return 1;
+		if (key == '\001') {
 			menu = main_menu;
-		else {
+			(*menu) (fd, key);
+		} else {
 			if (keyboard_control)
 				send_key (fd, key);
 			return 0;
 		}
 	}
 
-	(*menu) (fd, key);
 	return 0;
 }
 
 static int client_loop (int fd)
 {
 	int ret = 0;
-	PANEL *pnl = new_panel (stdscr);
 
 	for (;;) {
 		unsigned char msg;
@@ -512,9 +609,20 @@ static int client_loop (int fd)
 		tv.tv_sec = 1;
 		tv.tv_usec = 0;
 		sretcode = select (fd + 1, &readfds, NULL, NULL, &tv);
-		if (!sretcode || (sretcode == -1 && errno == EINTR))
+		if (!sretcode || (sretcode == -1 && errno == EINTR)) {
 			/* Timeout. */
+			sigset_t set;
+			sigemptyset (&set);
+			sigaddset (&set, SIGINT);
+			sigprocmask (SIG_BLOCK, &set, NULL);
+			while (caught_break) {
+				if (keyboard_control)
+					send_key (fd, '\3');
+				caught_break--;
+			}
+			sigprocmask (SIG_UNBLOCK, &set, NULL);
 			continue;
+		}
 
 		if (FD_ISSET (STDIN_FILENO, &readfds))
 			handle_input (fd);
@@ -526,6 +634,9 @@ static int client_loop (int fd)
 			ret = 1;
 			break;
 		}
+
+		if (msg == Msg_Terminate)
+			break;
 
 		switch (msg) {
 		case Msg_IncrementalUpdate:
@@ -542,8 +653,39 @@ static int client_loop (int fd)
 		}
 	}
 
-	del_panel (pnl);
 	return 0;
+}
+
+static void do_colourmap_setup (int high, int background)
+{
+	int i;
+	for (i = 0; i < 7; i++)
+		colourmap[high][i] = high * 8 + i;
+
+	colourmap[high][7] = 0;
+
+	init_pair (colourmap[high][0x0], COLOR_BLACK, background);
+	init_pair (colourmap[high][0x1], COLOR_BLUE, background);
+	init_pair (colourmap[high][0x2], COLOR_GREEN, background);
+	init_pair (colourmap[high][0x3], COLOR_CYAN, background);
+	init_pair (colourmap[high][0x4], COLOR_RED, background);
+	init_pair (colourmap[high][0x5], COLOR_MAGENTA, background);
+	init_pair (colourmap[high][0x6], COLOR_YELLOW, background);
+}
+
+void setup_colours (void)
+{
+	start_color ();
+	assert (COLOR_PAIRS >= (8 * 8));
+
+	do_colourmap_setup (0, COLOR_BLACK);
+	do_colourmap_setup (1, COLOR_BLUE);
+	do_colourmap_setup (2, COLOR_GREEN);
+	do_colourmap_setup (3, COLOR_CYAN);
+	do_colourmap_setup (4, COLOR_RED);
+	do_colourmap_setup (5, COLOR_MAGENTA);
+	do_colourmap_setup (6, COLOR_YELLOW);
+	do_colourmap_setup (7, COLOR_CYAN);
 }
 
 static int client (int fd)
@@ -556,6 +698,7 @@ static int client (int fd)
 	unsigned long their_major;
 	struct ClientInitialisation_fixedpart ci;
 	struct sigaction alrm;
+	struct sigaction sint;
 
 	initscr ();
 	atexit ((void(*)(void))endwin);
@@ -564,10 +707,15 @@ static int client (int fd)
 	nonl ();
 	intrflush (stdscr, FALSE);
 	keypad (stdscr, TRUE);
+	setup_colours ();
 
 	alrm.sa_handler = sigalrm;
-	alrm.sa_flags = SA_RESTART;
+	alrm.sa_flags = 0;
 	sigaction (SIGALRM, &alrm, NULL);
+
+	sint.sa_handler = sigint;
+	sint.sa_flags = 0;
+	sigaction (SIGINT, &sint, NULL);
 
 	/**
 	 * Receive ProtocolVersion
@@ -636,7 +784,7 @@ static int client (int fd)
 	 **/
 	ci.updatems = 0;
 	getmaxyx (stdscr, ci.rows, ci.cols);
-	ci.pad = 0;
+	ci.pad1 = ci.pad2 = ci.pad3 = ci.pad4 = 0;
 	ci.num_features = num_features;
 	if (write_exact (fd, &ci, sizeof (ci)))
 		return log ("Problem sending ClientInitialisation\n");

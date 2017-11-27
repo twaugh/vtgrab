@@ -23,6 +23,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <netinet/in.h>
+#include <signal.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,6 +53,7 @@ static uint8_t features[] = {
 
 static uint8_t in_use[256];
 
+static int ready_to_respawn;
 static int minor;
 static struct vt_stat vtstat;
 static int go;
@@ -325,6 +327,10 @@ static int handle_input (int fd)
 	}
 
 	switch (message_type) {
+	case Msg_Terminate:
+		log ("< Terminate\n");
+		return -1;
+
 	case Msg_FullUpdateRequest:
 		log ("< FullUpdateRequest\n");
 		return 1;
@@ -376,6 +382,11 @@ static int send_switch (int fd, char mode)
 	return write_exact (fd, switchmsg, sizeof (switchmsg));
 }
 
+static void handle_sigalrm (int sig __attribute__ ((unused)))
+{
+	ready_to_respawn = 1;
+}
+
 static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 {
 	const size_t MAX_CONTENTS = 100000;
@@ -387,6 +398,11 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 	int console = open_console ();
 	int do_full_update = 1;
 	unsigned short last_vt = 0;
+	struct sigaction sigalrm;
+
+	sigalrm.sa_handler = handle_sigalrm;
+	sigalrm.sa_flags = SA_RESTART;
+	sigaction (SIGALRM, &sigalrm, NULL);
 
 	if (console == -1) {
 		perror ("no console access");
@@ -402,9 +418,12 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 		exit (1);
 	}
 
+	ready_to_respawn = 1;
 	for (;;) {
+		int need_resend_switch = 0;
 		fd_set readfds;
 		ssize_t size = 0;
+		sigset_t set;
 		int c;
 
 		FD_ZERO (&readfds);
@@ -432,12 +451,22 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 			}
 		}
 
+		sigemptyset (&set);
+		sigaddset (&set, SIGCHLD);
+		sigaddset (&set, SIGALRM);
+		sigprocmask (SIG_BLOCK, &set, NULL);
 		while (reapees) {
 			reap_child ();
 			reapees--;
 		}
 
-		do_respawn ();
+		if (ready_to_respawn) {
+			do_respawn ();
+			ready_to_respawn = 0;
+			alarm (5);
+		}
+
+		sigprocmask (SIG_UNBLOCK, &set, NULL);
 	
 		if (ioctl (console, VT_GETSTATE, &vtstat)) {
 			perror ("VT_GETSTATE");
@@ -456,8 +485,12 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 		close (c);
 		sprintf (fgcons, "/dev/vcsa%d", vtstat.v_active);
 
-		if (in_use[Feature_Switch] && last_vt != vtstat.v_active)
+		if (in_use[Feature_Switch]
+		    && (last_vt != vtstat.v_active
+			|| need_resend_switch)) {
 			send_switch (fd, mode);
+			need_resend_switch = 0;
+		}
 
 		last_vt = vtstat.v_active;
 		if (mode == KD_TEXT) {
@@ -473,12 +506,11 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 			memset (last, 0, MAX_CONTENTS);
 		}
 
-		if (memcmp (last, contents, size)) {
-			if (do_full_update)
-				full_update (fd, contents, size, rows, cols);
-			else
-				incr_update (fd, last, contents, size, rows,
-					     cols);
+		if (do_full_update)
+			full_update (fd, contents, size, rows, cols);
+		else if (memcmp (last, contents, size)) {
+			incr_update (fd, last, contents, size, rows,
+				     cols);
 			memcpy (last, contents, size);
 		}
 

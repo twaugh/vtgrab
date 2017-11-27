@@ -62,11 +62,11 @@ MAKEINFO = @MAKEINFO@
 PACKAGE = @PACKAGE@
 VERSION = @VERSION@
 
-bin_PROGRAMS = rvc rvcd nrvc
+bin_PROGRAMS = rvc rvcd twiglet
 rvc_SOURCES = rvc.c
 rvcd_SOURCES = rvcd.c xfree86.c
-nrvc_SOURCES = nrvc.c
-nrvc_LDFLAGS = -lpanel -lncurses
+twiglet_SOURCES = nrvc.c simple_panel.c
+twiglet_LDFLAGS = -lncurses
 docdir = $(datadir)/doc/$(PACKAGE)
 doc_DATA = doc/rvc
 CFLAGS = -D_GNU_SOURCE -Wall -W -O2
@@ -91,9 +91,9 @@ rvcd_OBJECTS =  rvcd.o xfree86.o
 rvcd_LDADD = $(LDADD)
 rvcd_DEPENDENCIES = 
 rvcd_LDFLAGS = 
-nrvc_OBJECTS =  nrvc.o
-nrvc_LDADD = $(LDADD)
-nrvc_DEPENDENCIES = 
+twiglet_OBJECTS =  nrvc.o simple_panel.o
+twiglet_LDADD = $(LDADD)
+twiglet_DEPENDENCIES = 
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@
@@ -108,8 +108,8 @@ DISTFILES = $(DIST_COMMON) $(SOURCES) $(HEADERS) $(TEXINFOS) $(EXTRA_DIST)
 
 TAR = gtar
 GZIP_ENV = --best
-SOURCES = $(rvc_SOURCES) $(rvcd_SOURCES) $(nrvc_SOURCES)
-OBJECTS = $(rvc_OBJECTS) $(rvcd_OBJECTS) $(nrvc_OBJECTS)
+SOURCES = $(rvc_SOURCES) $(rvcd_SOURCES) $(twiglet_SOURCES)
+OBJECTS = $(rvc_OBJECTS) $(rvcd_OBJECTS) $(twiglet_OBJECTS)
 
 all: all-redirect
 .SUFFIXES:
@@ -209,9 +209,9 @@ rvcd: $(rvcd_OBJECTS) $(rvcd_DEPENDENCIES)
 	@rm -f rvcd
 	$(LINK) $(rvcd_LDFLAGS) $(rvcd_OBJECTS) $(rvcd_LDADD) $(LIBS)
 
-nrvc: $(nrvc_OBJECTS) $(nrvc_DEPENDENCIES)
-	@rm -f nrvc
-	$(LINK) $(nrvc_LDFLAGS) $(nrvc_OBJECTS) $(nrvc_LDADD) $(LIBS)
+twiglet: $(twiglet_OBJECTS) $(twiglet_DEPENDENCIES)
+	@rm -f twiglet
+	$(LINK) $(twiglet_LDFLAGS) $(twiglet_OBJECTS) $(twiglet_LDADD) $(LIBS)
 
 install-docDATA: $(doc_DATA)
 	@$(NORMAL_INSTALL)
@@ -310,10 +310,6 @@ distdir: $(DISTFILES)
 	    || cp -p $$d/$$file $(distdir)/$$file || :; \
 	  fi; \
 	done
-nrvc.o: nrvc.c config.h rvc.h
-rvc.o: rvc.c config.h rvc.h
-rvcd.o: rvcd.c config.h rvc.h xfree86.h
-xfree86.o: xfree86.c
 
 info-am:
 info: info-am

@@ -1,3 +1,75 @@
+2000-09-15  Tim Waugh  <twaugh@redhat.com>
+
+	* configure.in: Version 0.1.3.
+
+	* rvc.h: Define Msg_Terminate.
+
+	* rvcd.c (handle_input): Handle Msg_Terminate.
+	(server_loop): Resend Switch if x0rfbserver died.
+	(server_loop): Send full updates even if we don't think anything
+	changed.
+
+	* simple_panel.h (bottom_panel): Declare.
+
+	* simple_panel.c (update_panels): touchwin needs to be called for
+	pads too.
+	(bottom_panel): Implement.
+
+	* nrvc.c: Don't use Feature_Crop.
+	(update_display_panel): New function.  Handle panning around.
+	(handle_update): Use it.
+	(client_loop): Don't create panel for stdscr as we now use a
+	simple_pad for it.
+	(try_vncviewer): Return the PID.
+	(handle_switch): Kill any vncviewer process that we spawned.
+	(client_loop): Handle Msg_Terminate.
+	(send_switch_request): Request full update too.
+
+2000-09-14  Tim Waugh  <twaugh@redhat.com>
+
+	* simple_panel.h: New file.
+
+	* simple_panel.c: New file.
+
+	* nrvc.c (sigint): New function.
+	(client_loop): SIGINT handling.
+	(client): Handle SIGINT.
+
+	* rvcd.c (server_loop): Signal safety.
+
+2000-09-13  Tim Waugh  <twaugh@redhat.com>
+
+	* nrvc.c (handle_switch): Change status bar delay to two seconds.
+	(main_menu): Cleaner exit.
+
+2000-09-13  Tim Waugh  <twaugh@redhat.com>
+
+	* configure.in: Version 0.1.2.
+
+2000-09-13  Tim Waugh  <twaugh@redhat.com>
+
+	* xfree86.h: Interface for xfree86.c.
+
+	* xfree86.c: New file for tracking XFree86-controlled consoles.
+
+	* rvcd.c (incr_update): New function implementing incremental
+	updates.
+	(is_a_console): New function.
+	(open_named_console): New function.
+	(open_console): New function.
+	(do_switch): New function implementing SwitchRequest message.
+	(handle_input): Use it.
+	(send_switch): New function implementing Switch message.
+	(server_loop): Modifications for send_switch and incr_update.
+	(syntax): Corrections.
+	(main): Persistent TCP server.
+
+	* rvc.h: Draft 4 incorporates some of the corrections here.
+
+	* rvc.c (syntax): Corrections.
+
+	* nrvc.c: New file.
+
 2000-08-11  Tim Waugh  <twaugh@redhat.com>
 
 	* vtgrab.c (VERSION): Version 0.1.1 (devel).

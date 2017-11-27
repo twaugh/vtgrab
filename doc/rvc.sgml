@@ -4,7 +4,7 @@
 ]>
 
 <article id=index>
- <title>The RVC Protocol (draft 4!)</title>
+ <title>The RVC Protocol (draft 5!)</title>
 
  <artheader>
   <author>
@@ -384,6 +384,12 @@
        <row>
 	<entry>1</entry>
 	<entry>uint8_t</entry>
+	<entry>0</entry>
+	<entry spanname="description">message-type</entry>
+       </row>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
 	<entry></entry>
 	<entry spanname="description">num-features</entry>
        </row>
@@ -463,6 +469,10 @@
         <entry>11</entry>
         <entry spanname="description">Console switching</entry>
        </row>
+       <row>
+	<entry>12</entry>
+	<entry spanname="description">Console pushing</entry>
+       </row>
       </tbody>
      </tgroup>
     </table>
@@ -497,6 +507,17 @@
       </thead>
       <tbody>
        <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry>255</entry>
+	<entry spanname="description">message-type</entry>
+       </row>
+       <row>
+	<entry>3</entry>
+	<entry>uint8_t[]</entry>
+	<entry spanname="description">Padding</entry>
+       </row>
+       <row>
 	<entry>4</entry>
 	<entry>uint32_t</entry>
 	<entry></entry>
@@ -516,9 +537,9 @@
        </row>
        <row>
         <entry>1</entry>
-        <entry></entry>
+        <entry>uint8_t</entry>
         <entry>0</entry>
-        <entry spanname="description">Padding byte</entry>
+        <entry spanname="description">Special flags</entry>
        </row>
        <row>
 	<entry>1</entry>
@@ -558,6 +579,13 @@
      A zero value for a feature request means that the feature must
      not be used; a value of 1 means that it may be used.
     </para>
+
+    <para>
+     If the console pushing feature is in use, the server and client
+     swap roles, and the original client must send the original server
+     a <literal>ServerInitialisation</literal> message, which may
+     <emphasis>not</emphasis> advertise the console pushing feature.
+    </para>
    </section>
   </section>
 
@@ -596,7 +624,7 @@
        <row>
 	<entry>1</entry>
 	<entry>uint8_t</entry>
-	<entry>0</entry>
+	<entry>254</entry>
 	<entry>message-type</entry>
        </row>
       </tbody>
@@ -632,7 +660,7 @@
        <row>
 	<entry>1</entry>
 	<entry>uint8_t</entry>
-	<entry>1</entry>
+	<entry>253</entry>
 	<entry>message-type</entry>
        </row>
        <row>
@@ -674,7 +702,7 @@
        <row>
 	<entry>1</entry>
 	<entry>uint8_t</entry>
-	<entry>2</entry>
+	<entry>252</entry>
 	<entry>message-type</entry>
        </row>
        <row>
@@ -738,7 +766,7 @@
        <row>
 	<entry>1</entry>
 	<entry>uint8_t</entry>
-	<entry>3</entry>
+	<entry>251</entry>
 	<entry>message-type</entry>
        </row>
        <row>
@@ -746,6 +774,44 @@
 	<entry>uint8_t</entry>
 	<entry></entry>
 	<entry>virtual console number</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </section>
+
+   <section id="TerminateC">
+    <title>
+     <literal>Terminate</literal>
+    </title>
+
+    <para>
+     A <literal>Terminate</literal> message causes the server to go
+     back to its initial state (awaiting
+     <literal>ProtocolVersion</literal>), if the connection is still
+     valid.
+    </para>
+
+    <table frame="all"><title><literal>Terminate</literal></title>
+     <tgroup cols="4" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry>Type</entry>
+	<entry>Value</entry>
+	<entry>Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry>128</entry>
+	<entry>message-type</entry>
        </row>
       </tbody>
      </tgroup>
@@ -809,22 +875,22 @@
 	<entry>write</entry>
        </row>
        <row>
-	<entry></entry>
-	<entry></entry>
-	<entry>2</entry>
-	<entry>scroll</entry>
+	<entry rowsep="1"></entry>
+	<entry rowsep="1"></entry>
+	<entry rowsep="1">2</entry>
+	<entry rowsep="1">scroll</entry>
        </row>
        <row>
-	<entry>2</entry>
-	<entry>uint16_t</entry>
-	<entry>n</entry>
-	<entry>content-length</entry>
+	<entry rowsep="1">2</entry>
+	<entry rowsep="1">uint16_t</entry>
+	<entry rowsep="1">n</entry>
+	<entry rowsep="1">content-length</entry>
        </row>
        <row>
-	<entry>n</entry>
-	<entry>uint8_t[]</entry>
-	<entry></entry>
-	<entry>contents</entry>
+	<entry rowsep="1">n</entry>
+	<entry rowsep="1">uint8_t[]</entry>
+	<entry rowsep="1"></entry>
+	<entry rowsep="1">contents</entry>
        </row>
       </tbody>
      </tgroup>
@@ -976,6 +1042,44 @@
     </para>
    </section>
   </section>
+
+   <section id="TerminateS">
+    <title>
+     <literal>Terminate</literal>
+    </title>
+
+    <para>
+     A <literal>Terminate</literal> message causes the client to go
+     back to its initial state (send
+     <literal>ProtocolVersion</literal>), if the connection is still
+     valid.
+    </para>
+
+    <table frame="all"><title><literal>Terminate</literal></title>
+     <tgroup cols="4" align="left" colsep="1" rowsep="1">
+      <colspec colname="num">
+      <colspec colname="type">
+      <colspec colname="value">
+      <colspec colname="descr">
+      <thead>
+       <row>
+	<entry>No. of bytes</entry>
+	<entry>Type</entry>
+	<entry>Value</entry>
+	<entry>Description</entry>
+       </row>
+      </thead>
+      <tbody>
+       <row>
+	<entry>1</entry>
+	<entry>uint8_t</entry>
+	<entry>128</entry>
+	<entry>message-type</entry>
+       </row>
+      </tbody>
+     </tgroup>
+    </table>
+   </section>
  </section>
 </article>
 

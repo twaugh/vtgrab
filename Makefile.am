@@ -1,8 +1,8 @@
-bin_PROGRAMS = rvc rvcd nrvc
+bin_PROGRAMS = rvc rvcd twiglet
 rvc_SOURCES = rvc.c
 rvcd_SOURCES = rvcd.c xfree86.c
-nrvc_SOURCES = nrvc.c
-nrvc_LDFLAGS = -lpanel -lncurses
+twiglet_SOURCES = nrvc.c simple_panel.c
+twiglet_LDFLAGS = -lncurses
 docdir=$(datadir)/doc/$(PACKAGE)
 doc_DATA = doc/rvc
 CFLAGS = -D_GNU_SOURCE -Wall -W -O2
