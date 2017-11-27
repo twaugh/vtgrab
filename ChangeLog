@@ -1,5 +1,14 @@
 2000-09-17  Tim Waugh  <twaugh@redhat.com>
 
+	* configure.in: Version 0.1.5.
+
+2000-09-17  Tim Waugh  <twaugh@redhat.com>
+
+	* nrvc.c: Switch round the order of including signal.h and
+	curses.h.  Now it compiles on Red Hat Linux 6.2 systems.
+
+2000-09-17  Tim Waugh  <twaugh@redhat.com>
+
 	* configure.in: Version 0.1.4.
 
 2000-09-17  Tim Waugh  <twaugh@redhat.com>

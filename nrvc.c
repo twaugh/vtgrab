@@ -21,7 +21,6 @@
  
 #include <assert.h>
 #include <config.h>
-#include <curses.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
@@ -35,6 +34,10 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+// On some systems, signal.h and curses.h don't get on if _GNU_SOURCE
+#undef ERR
+#include <curses.h>
 
 #include "rvc.h"
 #include "simple_panel.h"
