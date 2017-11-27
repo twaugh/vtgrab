@@ -33,14 +33,15 @@ enum features {
 	Feature_Pointer = 1,
 	Feature_IncRectangle = 2,
 	Feature_IncScroll = 3,
-	Feature_Crop = 4,
-	Feature_Switch = 5,
-	Feature_DisplayLock = 6,
-	Feature_InputLock = 7,
-	Feature_Shareable = 8,
-	Feature_VNCIntegration = 9,
-	Feature_SwitchRequest = 10,
-	Feature_Push = 11,
+	Feature_Clear = 4,
+	Feature_Crop = 5,
+	Feature_Switch = 6,
+	Feature_DisplayLock = 7,
+	Feature_InputLock = 8,
+	Feature_Shareable = 9,
+	Feature_VNCIntegration = 10,
+	Feature_SwitchRequest = 11,
+	Feature_Push = 12,
 };
 
 enum server_messages {
@@ -63,6 +64,7 @@ enum client_messages {
 enum updatetypes {
 	UpdateType_Rectangle = 0,
 	UpdateType_Scroll = 1,
+	UpdateType_Clear = 2,
 };
 
 struct ClientInitialisation_fixedpart 

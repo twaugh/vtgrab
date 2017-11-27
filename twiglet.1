@@ -55,8 +55,9 @@ The \fIhost-specification\fR takes one of the following forms:
 \fIhost\fR:\fIport\fR
 to connect to an RVC server over TCP
 .TP
-\fItty\fR
-to communicate with an RVC server over a tty (for example a serial line)
+\fItty\fR [\fIhost\fR]
+to communicate with an RVC server over a tty (for example a serial line);
+the optional hostname is for VNC integration
 .SH BUGS
 I'm sure there are bugs, but I don't know what they are.
 .SH AUTHOR

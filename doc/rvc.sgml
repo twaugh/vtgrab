@@ -4,7 +4,7 @@
 ]>
 
 <article id=index>
- <title>The RVC Protocol (draft 5!)</title>
+ <title>The RVC Protocol (draft 6!)</title>
 
  <artheader>
   <author>
@@ -439,34 +439,38 @@
        </row>
        <row>
 	<entry>4</entry>
-	<entry spanname="description">Console cropping</entry>
+	<entry spanname="description">Clear screen updates</entry>
        </row>
        <row>
 	<entry>5</entry>
-	<entry spanname="description">Console switch reporting</entry>
+	<entry spanname="description">Console cropping</entry>
        </row>
        <row>
 	<entry>6</entry>
-	<entry spanname="description">Console display locking</entry>
+	<entry spanname="description">Console switch reporting</entry>
        </row>
        <row>
 	<entry>7</entry>
-	<entry spanname="description">Console input locking</entry>
+	<entry spanname="description">Console display locking</entry>
        </row>
        <row>
 	<entry>8</entry>
-	<entry spanname="description">Shareable session</entry>
+	<entry spanname="description">Console input locking</entry>
        </row>
        <row>
 	<entry>9</entry>
+	<entry spanname="description">Shareable session</entry>
+       </row>
+       <row>
+	<entry>10</entry>
 	<entry spanname="description">VNC server integration</entry>
        </row>
        <row>
-        <entry>10</entry>
+        <entry>11</entry>
         <entry spanname="description">Console switching</entry>
        </row>
        <row>
-	<entry>11</entry>
+	<entry>12</entry>
 	<entry spanname="description">Console pushing</entry>
        </row>
       </tbody>
@@ -865,10 +869,16 @@
 	<entry>rectangle</entry>
        </row>
        <row>
+	<entry></entry>
+	<entry></entry>
+	<entry>1</entry>
+	<entry>scroll</entry>
+       </row>
+       <row>
 	<entry rowsep="1"></entry>
 	<entry rowsep="1"></entry>
-	<entry rowsep="1">1</entry>
-	<entry rowsep="1">scroll</entry>
+	<entry rowsep="1">2</entry>
+	<entry rowsep="1">clear</entry>
        </row>
        <row>
 	<entry rowsep="1">2</entry>
@@ -1001,6 +1011,18 @@
 	</tbody>
        </tgroup>
       </table>
+     </listitem>
+
+     <listitem>
+      <para>
+       For <literal>clear</literal> updates nothing else follows the
+       header.
+      </para>
+
+      <para>
+       The intent of a <literal>clear</literal> update is to tell the
+       client to clear its terminal.
+      </para>
      </listitem>
     </itemizedlist>
    </section>

@@ -51,6 +51,7 @@ static uint8_t features[] = {
 	Feature_IncScroll,
 	Feature_SwitchRequest,
 	Feature_Switch,
+	Feature_Clear,
 };
 
 static uint8_t in_use[256];
@@ -209,7 +210,18 @@ static int scroll_update (FILE *f, uint8_t lines)
 	message[2] = 0;
 	message[3] = 1;
 	message[4] = lines;
-	fwrite (message, 5, 1, f);
+	fwrite (message, sizeof (message), 1, f);
+	return 0;
+}
+
+static int clear_update (FILE *f)
+{
+	uint8_t message[4];
+	message[0] = Msg_IncrementalUpdate;
+	message[1] = UpdateType_Clear;
+	message[2] = 0;
+	message[3] = 0;
+	fwrite (message, sizeof (message), 1, f);
 	return 0;
 }
 
@@ -222,6 +234,7 @@ static int incr_update (int fd, unsigned char *last, unsigned char *contents,
 	uint16_t content_length;
 	uint8_t first_changed, last_changed, i;
 	int rowsize = 2 * contents[1];
+	static int did_clear_last_time = 0;
 
 	if (in_use[Feature_Crop])
 		// Easier just to do a full screen update for this.
@@ -250,7 +263,7 @@ static int incr_update (int fd, unsigned char *last, unsigned char *contents,
 	last_changed = i;
 
 	// Look for scrolls
-	if (contents[3] == rows - 1) {
+	if (in_use[Feature_IncScroll] && contents[3] == rows - 1) {
 		uint8_t tryscrl, num;
 
 		for (tryscrl = 1; tryscrl < rows - 1; tryscrl++) {
@@ -278,6 +291,35 @@ static int incr_update (int fd, unsigned char *last, unsigned char *contents,
 				tryscrl * rowsize);
 			goto out;
 		}
+	}
+
+	// A clear update might be faster.
+	if (in_use[Feature_Clear]) {
+		int nonempty = 0, row;
+		for (row = 0; row < rows; row++) {
+			int c;
+			for (c = 0; c < rowsize; c += 2)
+				if (contents[4 + row * rowsize + c] != ' ' ||
+				    contents[5 + row * rowsize + c] != '\7')
+					break;
+			if (c < rowsize)
+				nonempty++;
+		}
+		if (!did_clear_last_time &&
+		    nonempty < (last_changed - first_changed + 1)) {
+			// It's worth our while.
+			size_t c;
+			log ("> Clear\n");
+			did_clear_last_time = 1;
+			clear_update (f);
+			// Mess with scr so that left-overs get dealt with.
+			for (c = 4; c < size; c += 2) {
+				contents[c] = ' ';
+				contents[c + 1] = '\7';
+			}
+			goto out;
+		}
+		did_clear_last_time = 0;
 	}
 
 	header[0] = Msg_IncrementalUpdate;
@@ -492,7 +534,6 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 
 	ready_to_respawn = 1;
 	for (;;) {
-		int need_resend_switch = 0;
 		fd_set readfds;
 		ssize_t size = 0;
 		sigset_t set;
@@ -542,6 +583,9 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 	
 		if (ioctl (console, VT_GETSTATE, &vtstat)) {
 			perror ("VT_GETSTATE");
+			close (console);
+			console = open_console ();
+			continue;
 			exit (1);
 		}
 		sprintf (fgcons, "/dev/tty%d", vtstat.v_active);
@@ -558,13 +602,9 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 		sprintf (fgcons, "/dev/vcsa%d", vtstat.v_active);
 
 		if (in_use[Feature_Switch]
-		    && (last_vt != vtstat.v_active
-			|| need_resend_switch)) {
+		    && (last_vt != vtstat.v_active))
 			send_switch (fd, mode);
-			need_resend_switch = 0;
-		}
 
-		last_vt = vtstat.v_active;
 		if (mode == KD_TEXT) {
 			c = open (fgcons, O_RDONLY | O_NOCTTY);
 			if (c == -1) {
@@ -589,6 +629,7 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 
 		go = 1;
 		do_full_update = 0;
+		last_vt = vtstat.v_active;
 	}
 
 out:

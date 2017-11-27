@@ -53,6 +53,7 @@ static uint8_t wishlist[] = {
 	Feature_IncScroll,
 	Feature_SwitchRequest,
 	Feature_Switch,
+	Feature_Clear,
 };
 
 static int caught_break = 0;
@@ -127,8 +128,7 @@ static int send_switchrequest (int fd, int switchto)
 
 	fputc (Msg_SwitchRequest, f);
 	fputc (switchto, f);
-	fclose (f);
-	return request_full_update (fd);
+	return fclose (f);
 }
 
 static int vt_menu (int fd, int key)
@@ -397,6 +397,15 @@ static int do_scroll (uint8_t lines)
 	return 0;
 }
 
+static int do_clear (void)
+{
+	WINDOW *wnd = panel_window (display);
+	werase (wnd);
+	update_display_panel ();
+	update_panels ();
+	return 0;
+}
+
 static int handle_update (int fd)
 {
 	static uint8_t *contents = NULL;
@@ -430,6 +439,9 @@ static int handle_update (int fd)
 
 	if (display && update_type == UpdateType_Scroll)
 		return do_scroll (contents[0]);
+
+	if (display && update_type == UpdateType_Clear)
+		return do_clear ();
 
 	if (update_type != UpdateType_Rectangle)
 		return 1;
@@ -539,6 +551,7 @@ static pid_t try_vncviewer (unsigned short port)
 
 static int handle_switch (int fd)
 {
+	static int last_mode = 0;
 	static int first = 1;
 	static pid_t vncviewer = -1;
 	WINDOW *wnd;
@@ -612,8 +625,10 @@ static int handle_switch (int fd)
 	status_pnl_expired = 0;
 	alarm (2);
 
-	if (!switchmsg[3])
+	if (last_mode != 0 && switchmsg[3] == 0)
 		request_full_update (fd);
+
+	last_mode = switchmsg[3];
 
 	return 0;
 }
@@ -642,6 +657,7 @@ static int handle_input (int fd)
 
 static int client_loop (int fd)
 {
+	int switch_no_update = 0;
 	int ret = 0;
 
 	for (;;) {
@@ -684,6 +700,10 @@ static int client_loop (int fd)
 				caught_break--;
 			}
 			sigprocmask (SIG_UNBLOCK, &set, NULL);
+
+			if (switch_no_update)
+				request_full_update (fd);
+
 			continue;
 		}
 
@@ -704,10 +724,12 @@ static int client_loop (int fd)
 		switch (msg) {
 		case Msg_IncrementalUpdate:
 			handle_update (fd);
+			switch_no_update = 0;
 			break;
 
 		case Msg_Switch:
 			handle_switch (fd);
+			switch_no_update = 1;
 			break;
 
 		default:
@@ -887,7 +909,7 @@ int syntax (void)
 {
 	fprintf (stderr,
 		 "Usage: nrvc <host>:<port>\n"
-		 "       nrvc <tty>\n"
+		 "       nrvc <tty> [host]\n"
 		 "       nrvc --help\n"
 		 "       nrvc --version\n");
 	return 0;
@@ -1009,7 +1031,8 @@ int main (int argc, char *argv[])
 		}
 	}
 
-	if (argc - optind != 1) {
+	if (argc - optind < 1 ||
+	    argc - optind > 2) {
 		syntax ();
 		exit (1);
 	}
@@ -1025,6 +1048,9 @@ int main (int argc, char *argv[])
 		cfsetispeed (&tios, B9600);
 		tcsetattr (fd, TCSANOW, &tios);
 		tcflush (fd, TCIOFLUSH);
+
+		if (argc - optind == 2)
+			remote_host = argv[optind + 1];
 	}
 
 	if (isatty (fd)) {

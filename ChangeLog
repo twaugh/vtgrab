@@ -1,3 +1,20 @@
+2000-11-03  Tim Waugh  <twaugh@redhat.com>
+
+	* doc/rvc.sgml: Draft 6.  Now includes clear updates.
+
+	* rvc.h: Update.
+
+	* nrvc.c (do_clear): New function.  Implement clear updates.
+	(handle_update): Use it.
+	(syntax): Optional hostname for tty host-spec.
+	(main): Implement it.
+
+	* rvcd.c (server_loop): Re-open console if VT_GETSTATE fails.
+	This allows rvcd to continue when things like kudzu are running.
+	(incr_update): Only use scroll if the feature is in use.
+	(clear_update): New function.  Implement clear updates.
+	(incr_update): Use it.
+
 2000-11-02  Tim Waugh  <twaugh@redhat.com>
 
 	* configure.in: Version 0.1.7.
@@ -10,6 +27,7 @@
 	(scroll_update): New function.  Implement scroll updates.
 	(incr_update): Use it.
 	(incr_update): Smarter single-line updates.
+
 	* nrvc.c (do_scroll): New function.  Implement scroll updates.
 	(handle_update): Use it.
 	(handle_update): Bug-fix for partial line updates.
@@ -23,6 +41,7 @@
 	* nrvc.c (terminate): New function.  Do tty setup.
 	(client): Use it.
 	(main): Likewise.
+
 	* rvcd.c (server_loop): Cap delay at a sensible amount.  Do
 	tty setup and draining.
 
