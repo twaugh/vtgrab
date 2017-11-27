@@ -37,13 +37,17 @@
 
 #include <config.h>
 #include "rvc.h"
+#include "xfree86.h"
 
 /* set to zero for production */
-#define DEBUG 1
+#define DEBUG 0
 
 static uint8_t features[] = {
 	Feature_Crop,
-	Feature_Key
+	Feature_Key,
+	Feature_IncRectangle,
+	Feature_SwitchRequest,
+	Feature_Switch,
 };
 
 static uint8_t in_use[256];
@@ -133,6 +137,7 @@ static int full_update (int fd, unsigned char *contents, size_t size,
 
 	header[0] = Msg_IncrementalUpdate;
 	header[1] = UpdateType_Rectangle;
+
 	if (in_use[Feature_Crop]) {
 		unsigned char *cropped, *p, *q;
 		content_length = 4 + (rows * cols * 2);
@@ -192,6 +197,59 @@ static int full_update (int fd, unsigned char *contents, size_t size,
 	return 0;
 }
 
+static int incr_update (int fd, unsigned char *last, unsigned char *contents,
+			size_t size, uint8_t rows, uint8_t cols)
+{
+	int newfd;
+	FILE *f;
+	unsigned char header[10];
+	uint16_t content_length;
+	uint8_t first_changed, last_changed, i;
+	int rowsize = 2 * contents[1];
+
+	if (in_use[Feature_Crop])
+		// Easier just to do a full screen update for this.
+		return full_update (fd, contents, size, rows, cols);
+
+	newfd = dup (fd);
+	f = fdopen (newfd, "r+");
+	if (!f)
+		return 1;
+
+	// Compare line by line
+	rows = contents[0];
+	for (i = 0; i < rows; i++)
+		if (memcmp (contents + 4 + i * rowsize, last + 4 + i * rowsize,
+			    rowsize))
+			break;
+
+	first_changed = i;
+	for (i = rows - 1; i > first_changed; i--)
+		if (memcmp (contents + 4 + i * rowsize, last + 4 + i * rowsize,
+			    rowsize))
+			break;
+
+	last_changed = i;
+
+	header[0] = Msg_IncrementalUpdate;
+	header[1] = UpdateType_Rectangle;
+	size = (last_changed - first_changed + 1) * rowsize;
+	content_length = 6 + size;
+	content_length = htons (content_length);
+	memcpy (header + 2, &content_length, 2);
+	header[4] = 0; // x offset
+	header[5] = first_changed; // y offset
+	header[6] = last_changed - first_changed + 1;
+	header[7] = contents[1];
+	header[8] = contents[2];
+	header[9] = contents[3];
+	fwrite (header, 10, 1, f);
+	fwrite (contents + 4 + first_changed * rowsize, size, 1, f);
+	fclose (f);
+
+	return 0;
+}
+
 static void skip (int fd, int n)
 {
 	static unsigned char scratch[256];
@@ -210,14 +268,60 @@ static int do_key (char key)
 	return 0;
 }
 
+static int is_a_console (int fd)
+{
+	char arg = 0;
+	return (ioctl(fd, KDGKBTYPE, &arg) == 0
+		&& ((arg == KB_101) || (arg == KB_84)));
+}
+
+static int open_named_console (const char *tty)
+{
+	int fd = open (tty, O_RDWR | O_NOCTTY);
+	if (fd == -1) {
+		fd = open (tty, O_RDONLY | O_NOCTTY);
+		if (fd == -1) {
+			fd = open (tty, O_WRONLY | O_NOCTTY);
+			if (fd == -1)
+				return -1;
+		}
+	}
+
+	if (is_a_console (fd))
+		return fd;
+
+	close (fd);
+	return -1;
+}
+
+static int open_console (void)
+{
+	int fd = open_named_console ("/dev/tty");
+	if (fd == -1)
+		fd = open_named_console ("/dev/tty0");
+	if (fd == -1)
+		fd = open_named_console ("/dev/console");
+	return fd;
+}
+
+static int do_switch (unsigned char switchmsg)
+{
+	int cons = switchmsg;
+	int fd = open_console ();
+	ioctl (fd, VT_ACTIVATE, cons);
+	close (fd);
+	return 0;
+}
+
 static int handle_input (int fd)
 {
 	uint8_t message_type;
 	char keymsg;
+	char switchmsg;
 
 	if (read_exact (fd, &message_type, 1)) {
 		log ("Problem receiving input\n");
-		exit (1);
+		return -1;
 	}
 
 	switch (message_type) {
@@ -228,10 +332,19 @@ static int handle_input (int fd)
 	case Msg_Key:
 		log ("< Key\n");
 		if (read (fd, &keymsg, 1) < 1)
-			exit (0);
+			return -1;
 		if (!in_use[Feature_Key])
 			log ("Not in use!\n");
 		else do_key (keymsg);
+		break;
+
+	case Msg_SwitchRequest:
+		log ("< SwitchRequest\n");
+		if (read (fd, &switchmsg, 1) < 1)
+			return -1;
+		if (!in_use[Feature_SwitchRequest])
+			log ("Not in use!\n");
+		else do_switch (switchmsg);
 		break;
 
 	case Msg_Pointer:
@@ -241,19 +354,26 @@ static int handle_input (int fd)
 			log ("Not in use!\n");
 		break;
 
-	case Msg_SwitchRequest:
-		log ("< SwitchRequest\n");
-		skip (fd, 1);
-		if (!in_use[Feature_SwitchRequest])
-			log ("Not in use!\n");
-		break;
-
 	default:
 		log ("Invalid message type %d\n", message_type);
-		return 1;
+		return -1;
 	}
 
 	return 0;
+}
+
+static int send_switch (int fd, char mode)
+{
+	unsigned short port;
+	uint8_t switchmsg[5];
+	vt_switched_to (vtstat.v_active);
+	port = port_for_console (vtstat.v_active);
+	switchmsg[0] = Msg_Switch;
+	switchmsg[1] = vtstat.v_active;
+	port = htons (port);
+	memcpy (switchmsg + 2, &port, 2);
+	switchmsg[4] = mode;
+	return write_exact (fd, switchmsg, sizeof (switchmsg));
 }
 
 static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
@@ -264,10 +384,12 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 	struct timeval tv;
 	unsigned char *contents = malloc (MAX_CONTENTS);
 	unsigned char *last = calloc (MAX_CONTENTS, 1);
-	int console = open ("/dev/console", O_RDONLY | O_NOCTTY);
+	int console = open_console ();
+	int do_full_update = 1;
+	unsigned short last_vt = 0;
 
 	if (console == -1) {
-		perror ("/dev/console");
+		perror ("no console access");
 		exit (1);
 	}
 
@@ -279,6 +401,7 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 		printf ("Memory squeeze\n");
 		exit (1);
 	}
+
 	for (;;) {
 		fd_set readfds;
 		ssize_t size = 0;
@@ -288,11 +411,34 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 		FD_SET (fd, &readfds);
 		tv.tv_sec = 0;
 		tv.tv_usec = delay * 1000;
-		if (select (fd + 1, &readfds, NULL, NULL, &tv)) {
-			if ((FD_ISSET (fd, &readfds)) && !handle_input (fd))
-				continue;
+		switch (select (fd + 1, &readfds, NULL, NULL, &tv)) {
+		case 0: // timeout
+			break;
+
+		case -1: // probably interrupted
+			break;
+
+		default:
+			if (FD_ISSET (fd, &readfds)) {
+				switch (handle_input (fd)) {
+				case 0:
+					continue;
+				case 1:
+					do_full_update = 1;
+					break;
+				default:
+					goto out;
+				}
+			}
 		}
-		
+
+		while (reapees) {
+			reap_child ();
+			reapees--;
+		}
+
+		do_respawn ();
+	
 		if (ioctl (console, VT_GETSTATE, &vtstat)) {
 			perror ("VT_GETSTATE");
 			exit (1);
@@ -309,6 +455,11 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 		}
 		close (c);
 		sprintf (fgcons, "/dev/vcsa%d", vtstat.v_active);
+
+		if (in_use[Feature_Switch] && last_vt != vtstat.v_active)
+			send_switch (fd, mode);
+
+		last_vt = vtstat.v_active;
 		if (mode == KD_TEXT) {
 			c = open (fgcons, O_RDONLY | O_NOCTTY);
 			if (c == -1) {
@@ -320,20 +471,22 @@ static int server_loop (int fd, uint32_t delay, uint8_t rows, uint8_t cols)
 		} else if (size) {
 			size = 0;
 			memset (last, 0, MAX_CONTENTS);
-			//if (in_use[Feature_Switch])
-			//  send_switch(...);
-			//printf ("%ld,0\n", mode);
-			//fflush (stdout);
 		}
 
 		if (memcmp (last, contents, size)) {
-			full_update (fd, contents, size, rows, cols);
+			if (do_full_update)
+				full_update (fd, contents, size, rows, cols);
+			else
+				incr_update (fd, last, contents, size, rows,
+					     cols);
 			memcpy (last, contents, size);
 		}
 
 		go = 1;
+		do_full_update = 0;
 	}
 
+out:
 	close (console);
 	return 0;
 }
@@ -448,8 +601,8 @@ static int server (int fd)
 
 static void syntax (void)
 {
-	fprintf (stderr, "Usage: rvcd :[port]\n"
-			 "       rvcd [tty]\n"
+	fprintf (stderr, "Usage: rvcd :<port>\n"
+			 "       rvcd <tty>\n"
 			 "       rvcd --help\n"
 			 "       rvcd --syntax\n");
 }
@@ -457,6 +610,7 @@ static void syntax (void)
 int main (int argc, char **argv)
 {
 	int fd;
+	int s = -1;
 
 	if (argc < 2) {
 		syntax ();
@@ -478,7 +632,6 @@ int main (int argc, char **argv)
 		unsigned long port;
 		char *start, *end;
 		int on = 1;
-		int s;
 		if (argv[1][0] != ':') {
 			perror (argv[1]);
 			exit (1);
@@ -513,9 +666,20 @@ int main (int argc, char **argv)
 			close (s);
 			exit (1);
 		}
-		close (s);
 	}
 
-	server (fd);
+	xfree86_init ();
+	for (;;) {
+		server (fd);
+		if (s != -1) {
+			fd = accept (s, NULL, NULL);
+			if (fd == -1) {
+				perror ("accept");
+				close (s);
+				exit (1);
+			}
+		}
+	}
+
 	return 0;
 }

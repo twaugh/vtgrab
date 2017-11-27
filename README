@@ -1,15 +1,35 @@
 vtgrab is a program to copy the foreground terminal of one machine to
 another, in order to allow remote monitoring.
 
+In this package is:
+
+- an RVC server (rvcd)
+- a console client (rvc)
+- an ncurses-based client (nrvc)
+
 You can use it like this:
 
-# ssh root@observed 'rvcd :6100&'; rvc observed:6100
+# ssh root@observed 'rvcd :6100 > /dev/null 2>&1 &'
+$ nrvc observed:6100
 
-(It needs to run as root on the observed machine.)
+The server needs to run as root on the observed machine.  The console
+client also needs to run as root.
 
 The eventual aim is to be able to use this in a teaching environment
 in such a way that whatever is on the student's screen can be seen by
 the tutor, including graphics.
+
+If you have vncserver installed on the client machine, and
+x0rfbserver installed on the server machine (with a patch to make it
+accept --stealth as an argument), you will be able to monitor and
+control X sessions too.
+
+For x0rfbserver, see the RPMS I made at:
+
+<URL:ftp://people.redhat.com/twaugh/SRPMS/>
+
+You'll need the rfb package for x0rfbserver, and it depends on xclass
+(also in that directory).
 
 Tim.
 */

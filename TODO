@@ -1,0 +1,23 @@
+General:
+
+- Don't use automake any more since it can't handle non-recursive make
+
+RVCD:
+
+- Report terminal switches
+- Handle Feature_Crop and Feature_IncRectangle simultaneously
+
+NRVC:
+
+- Use pads instead of Feature_Crop and pan around following cursor
+- Handle character attributes
+- Write INSTALL
+- VNC integration
+- Status bar
+- Handle Control-C etc
+- Use terminfo so that we send the right characters (overcome getch)
+
+RVC:
+
+- VNC integration
+- Handle Control-C etc

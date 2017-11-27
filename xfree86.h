@@ -20,50 +20,12 @@
  * This file contains definitions needed for RVC communications.
  */
 
-#define RVC_PROTOCOL_VERSION "RVC 001.000\n"
+extern int reapees;
 
-enum authentication_schemes {
-	AuthFailed = 0,
-	AuthNoAuth = 1,
-	AuthVNC = 2
-};
+extern int xfree86_init (void);
+extern int reap_child (void);
+extern int vt_switched_to (unsigned long console);
+extern int do_respawn (void);
+extern unsigned short port_for_console (unsigned long console);
 
-enum features {
-	Feature_Key = 0,
-	Feature_Pointer = 1,
-	Feature_IncRectangle = 2,
-	Feature_IncScroll = 3,
-	Feature_IncWrite = 4,
-	Feature_Crop = 5,
-	Feature_Switch = 6,
-	Feature_DisplayLock = 7,
-	Feature_InputLock = 8,
-	Feature_Shareable = 9,
-	Feature_VNCIntegration = 10,
-	Feature_SwitchRequest = 11
-};
-
-enum server_messages {
-	Msg_IncrementalUpdate = 1,
-	Msg_Switch = 2
-};
-
-enum client_messages {
-	Msg_FullUpdateRequest = 0,
-	Msg_Key = 1,
-	Msg_Pointer = 2,
-	Msg_SwitchRequest = 3
-};
-
-enum updatetypes {
-	UpdateType_Rectangle = 2
-};
-
-struct ClientInitialisation_fixedpart 
-{
-	uint32_t updatems;
-	uint8_t rows;
-	uint8_t cols;
-	uint8_t pad;
-	uint8_t num_features;
-};
+extern int dump_debug (void);

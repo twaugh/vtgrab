@@ -355,8 +355,8 @@ static int client (int fd)
 
 static void syntax (void)
 {
-	printf ("Usage: rvc host:[port]\n"
-		"       rvc [tty]\n"
+	printf ("Usage: rvc <host>:<port>\n"
+		"       rvc <tty>\n"
 		"	rvc --version\n"
 		"       rvc --help\n");
 }
